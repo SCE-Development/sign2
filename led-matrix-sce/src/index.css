@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  color-scheme: light dark;
+  background: linear-gradient(to right, #3d485f, #3d485f,
+      #3a455e, #353f5c, #303a5a,
+      #2a3558, #253055, #1e2c56,
+      #1b2953, #18264f, #18264f,
+      #1c2a49, #1d2c44, #1e283c);
+}
+
+body {
+  margin: 0;
+}

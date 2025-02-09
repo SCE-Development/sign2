@@ -1,0 +1,97 @@
+.register-form {
+    border-radius: 12px;
+    text-align: center;
+    width: 350px;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+/* Styling for the heading */
+.register-form h1 {
+    padding-top: 45px;
+    font-size: 44px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: #e3e3e3;
+}
+
+/* Styling for inputs */
+#username-input,
+#first-name-input,
+#last-name-input,
+#confirm-username-input {
+    width: 100%;
+    /* Full width inside form */
+    height: 40px;
+    font-size: 18px;
+    padding: 8px;
+    margin: 10px 0;
+    border: 2px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    outline: none;
+    transition: 0.3s;
+}
+
+/* Focus effect */
+#username-input:focus,
+#first-name-input:focus,
+#last-name-input:focus {
+    border-color: #6a9eff;
+}
+
+/* Register Button */
+#register-button {
+    width: 105%;
+    height: 45px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    background: #6a9eff;
+    color: #ffffff;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: 0.3s;
+}
+
+/* Button hover effect */
+#register-button:hover {
+    background: #5587d8;
+}
+
+/* Success/Error message */
+
+
+/* Make form responsive */
+@media (max-width: 400px) {
+    .register-form {
+        width: 90%;
+    }
+}
+
+.register-container {
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    max-width: 100px;
+}
+
+.message {
+    font-size: 16px;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* Error Message: Red */
+.error-message {
+    color: #ff6b6b;
+    /* Red */
+}
+
+/* Success Message: Green */
+.success-message {
+    color: #6aff89;
+    /* Green */
+}

@@ -1,0 +1,165 @@
+/* Admin Panel */
+.admin-panel {
+    width: 80%;
+    max-width: 800px;
+    /* Prevents it from getting too wide */
+    height: auto;
+    /* Adjusts height dynamically */
+    margin: 40px auto;
+    background-color: #1A1A1A;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    /* Soft shadow for better contrast */
+}
+
+/* Header */
+.admin-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #333;
+    /* Adds a subtle separation */
+}
+
+.admin-panel-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: bold;
+    color: #e3e3e3;
+    font-size: 44px;
+    text-align: center;
+    margin: 0 auto;
+    /* Align to the top */
+    height: auto;
+    /* Center the title */
+    flex-grow: 1;
+}
+
+/* Edit Button */
+.admin-panel-button {
+    background-color: #007AFF;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.admin-panel-button:hover {
+    background-color: #005ecb;
+    /* Slightly darker blue on hover */
+}
+
+/* List Container */
+.admin-panel-list {
+    list-style-type: none;
+    padding: 0px;
+    margin: auto;
+}
+
+/* List Items */
+.admin-panel-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #333;
+    transition: background-color 0.3s;
+    border-radius: 4px;
+}
+
+.admin-panel-item:hover {
+    background-color: #2A2A2A;
+}
+
+/* Admin Name */
+.admin-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #e3e3e3;
+}
+
+/* Username */
+.admin-username {
+    font-weight: bold;
+    color: #007AFF;
+    font-size: 14px;
+    margin: auto;
+    text-align: left;
+}
+
+/* Actions (Edit Mode) */
+.admin-panel-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Buttons */
+.admin-panel-update-button,
+.admin-panel-delete-button {
+    background-color: #444;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.admin-panel-update-button:hover {
+    background-color: #388E3C;
+    /* Green hover for update */
+}
+
+.admin-panel-delete-button {
+    background-color: #D32F2F;
+}
+
+.admin-panel-delete-button:hover {
+    background-color: #B71C1C;
+    /* Darker red on hover */
+}
+
+/* Input Fields */
+.admin-panel-input {
+    background-color: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 150px;
+    /* Keeps input fields aligned */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .admin-panel {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .admin-panel-header {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .admin-panel-title {
+        font-size: 28px;
+    }
+
+    .admin-panel-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .admin-panel-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

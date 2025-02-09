@@ -1,0 +1,70 @@
+.button-stack {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 0px;
+}
+
+.button-stack button {
+    padding: 10px, 25px;
+    /* Reduced vertical padding on buttons */
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2c3e50;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 200px;
+    min-height: 50px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.button-stack button:hover {
+    background-color: #34495e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.button-stack button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific button colors */
+.button-stack button:nth-child(1) {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+    background-color: #808080;
+}
+
+.button-stack button:nth-child(2) {
+    background-color: #ff2800;
+    color: black;
+    /* Stop button - red */
+}
+
+.button-stack button:nth-child(3) {
+    background-color: #3498db;
+    color: black;
+    /* Reset button - blue */
+}
+
+/* Hover states for specific buttons */
+.button-stack button:nth-child(1):hover {
+    background-color: rgb(255, 191, 0);
+    color: white;
+}
+
+.button-stack button:nth-child(2):hover {
+    background-color: #ff2800;
+    color: white;
+}
+
+.button-stack button:nth-child(3):hover {
+    background-color: #3498db;
+    color: white;
+}
