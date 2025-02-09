@@ -1,8 +1,10 @@
-# READ ALL BEFORE RUNNING ANYTHING !!!!!!!!!
+# READ ALL BEFORE RUNNING ANYTHING !
 
-# FIND THE TMUX SECTION FIRST, IT HAS ALL THE COMMANDS TO RUN THE PROGRAM
-# ATTEMPT TO ATTACH TO SESSION FIRST WITH: tmux attach -t ledsign
-# KILL SESSION WITH: tmux kill-session -t ledsign
+## FIND THE TMUX SECTION FIRST, IT HAS ALL THE COMMANDS TO RUN THE PROGRAM
+## ATTEMPT TO ATTACH TO SESSION FIRST WITH: tmux attach -t ledsign
+## KILL SESSION WITH: tmux kill-session -t ledsign
+## Detach from session with: Ctrl+b, d
+## Navigate between windows with: Ctrl+b, arrow keys
 
 # LeetCode Leaderboard LED Sign
 
