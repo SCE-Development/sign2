@@ -12,7 +12,7 @@ const Buttons = () => {
                 className={location.pathname === '/' ? 'active' : ''}
                 onClick={() => navigate('/')}
             >
-                Leetcode Leaderboard
+                Leaderboard
             </button>
             <button
                 className={location.pathname === '/announcement' ? 'active' : ''}
