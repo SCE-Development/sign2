@@ -1,6 +1,7 @@
 .announcement-container {
     padding: 20px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
@@ -55,4 +56,25 @@
 .submit-button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+.reset-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: red;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 150px;
+}
+
+.reset-button:hover {
+    background-color: rgb(181, 3, 3);
+    transform: translateY(-2px);
+}
+
+.error-message {
+    color: rgb(249, 75, 75);
 }

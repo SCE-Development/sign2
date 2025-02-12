@@ -57,14 +57,18 @@
 .button-stack button:nth-child(1):hover {
     background-color: rgb(255, 191, 0);
     color: white;
+    cursor: pointer;
+    transform: translateY(-2px);
 }
 
 .button-stack button:nth-child(2):hover {
     background-color: #ff2800;
     color: white;
+    cursor: pointer;
 }
 
 .button-stack button:nth-child(3):hover {
     background-color: #3498db;
     color: white;
+    cursor: pointer;
 }
