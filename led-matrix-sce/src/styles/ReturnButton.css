@@ -1,0 +1,20 @@
+.return-button {
+    cursor: pointer;
+    border: none;
+    height: 50px;
+    width: 50px;
+    background-color: white;
+    display: flex;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    margin: 10px;
+}
+
+.return-button:hover {
+    background-color: lightgray;
+    transform: translateY(2px);
+}
+
+.return-button-container {
+    justify-content: left;
+}
