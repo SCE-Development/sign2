@@ -177,7 +177,7 @@ async def upload_image(file: UploadFile = File(...), api_key: str = Security(get
         # Send new display command to LED sign pane
         subprocess.run([
             "tmux", "send-keys", "-t", "ledsign:0.4",
-            f"cd ~/leetcode-leaderboard && source leetcode-led/bin/activate && cd rpi-rgb-led-matrix && "
+            f"cd ~/leetcode-leaderboard && source leetcode-led/bin/activate && cd ~/leetcode-leaderboard/rpi-rgb-led-matrix && "
             f"sudo ./utils/led-image-viewer --led-rows=64 --led-cols=64 "
             f"--led-chain=4 --led-gpio-mapping=adafruit-hat --led-slowdown-gpio=4 "
             f"--led-pixel-mapper=U-mapper ./user-images/resized-{file_name}",

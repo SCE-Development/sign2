@@ -102,7 +102,7 @@ void DisplayLeaderboard(RGBMatrix* canvas,
       text_color = Color(255,0,0);
     }
     else if (rank == 3){
-      text_color = Color(0,0,255);
+      text_color = Color(126, 147, 255);
     }
     else {
       text_color = Color(255, 255, 255);

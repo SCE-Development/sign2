@@ -9,13 +9,13 @@ const Buttons = () => {
     return (
         <div className="button-stack">
             <button
-                className={location.pathname === '/' ? 'selected' : ''}
+                className={location.pathname === '/' ? 'active' : ''}
                 onClick={() => navigate('/')}
             >
                 Leetcode Leaderboard
             </button>
             <button
-                className={location.pathname === '/announcement' ? 'selected' : ''}
+                className={location.pathname === '/announcement' ? 'active' : ''}
                 onClick={() => navigate('/announcement')}
             >
                 Announcement

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import AnnouncementDashboard from './pages/Annoucement-Dashboard';
+import AnnouncementDashboard from './pages/Announcement-Dashboard';
 
 function App() {
   return (
