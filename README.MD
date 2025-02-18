@@ -1,16 +1,15 @@
-# READ ALL BEFORE RUNNING ANYTHING !
-
-FIND THE TMUX SECTION FIRST, IT HAS ALL THE COMMANDS TO RUN THE PROGRAM
-ATTEMPT TO ATTACH TO SESSION FIRST WITH: tmux attach -t ledsign
-KILL SESSION WITH: tmux kill-session -t ledsign
-Detach from session with: Ctrl+b, d
-Navigate between windows with: Ctrl+b, arrow keys
 
 # LeetCode Leaderboard LED Sign
 
 This project is a **LeetCode Leaderboard** displayed on an **RGB LED matrix**, running on a **Raspberry Pi**. It integrates with **LeetCode's GraphQL API**, fetches user stats, and displays them dynamically. The backend is built using **FastAPI** and **SQLite**, while the frontend includes a React-based dashboard.
 
 ---
+# READ ALL BEFORE RUNNING ANYTHING !
+- FIND THE TMUX SECTION FIRST, IT HAS ALL THE COMMANDS TO RUN THE PROGRAM
+- ATTEMPT TO ATTACH TO SESSION FIRST WITH: tmux attach -t ledsign
+- KILL SESSION WITH: tmux kill-session -t ledsign
+- Detach from session with: Ctrl+b, d
+- Navigate between windows with: Ctrl+b, arrow keys
 
 ## 📂 Project Structure
 
