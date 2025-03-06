@@ -39,14 +39,15 @@ const FileUpload = () => {
 
 
     const handleImageUpload = async () => {
-        if (!selectedImage) return;
+        if (!selectedImage || isUploading) return;
 
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', selectedImage);
 
         try {
-            const response = await fetch(`${MAIN_URL}/uploadImage`, {
+            // First call to kill the current process
+            await fetch(`${MAIN_URL}/uploadImage`, {
                 method: 'POST',
                 headers: {
                     'x-api-key': API_KEY,
@@ -60,10 +61,8 @@ const FileUpload = () => {
 
             const data = await response.json();
             console.log('Success:', data);
-            // Optionally add success message or notification here
         } catch (error) {
             console.error('Error:', error);
-            // Optionally add error message or notification here
         } finally {
             setIsUploading(false);
         }

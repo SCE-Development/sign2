@@ -31,7 +31,8 @@
 
 /* Announcement button */
 .button-stack button:nth-child(2) {
-    background-color: #ff2800;
+    /* background-color: #cc1f00ab; */
+    background-color: grey;
 }
 
 .button-stack button:nth-child(2).active {
@@ -40,7 +41,8 @@
 
 /* Clock & Weather button */
 .button-stack button:nth-child(3) {
-    background-color: #3498db;
+    /* background-color: rgb(255, 191, 0); */
+    background-color: grey;
 }
 
 /* Hover effects */
