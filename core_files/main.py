@@ -140,8 +140,6 @@ async def delete_user_endpoint(user: Users):
 
 @app.post("/uploadImage")
 async def upload_image(file: UploadFile = File(...), api_key: str = Security(get_api_key)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
     # Create directories if they don't exist
     os.makedirs("../rpi-rgb-led-matrix/user-images", exist_ok=True)
     os.makedirs("../rpi-rgb-led-matrix/user-vids", exist_ok=True)
@@ -155,82 +153,110 @@ async def upload_image(file: UploadFile = File(...), api_key: str = Security(get
     image_extensions = {'.png', '.jpg', '.jpeg', '.bmp'}
     video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.gif'}
 
-    # Kill current display in the LED sign pane
-    subprocess.run([
-        "tmux", "send-keys", "-t", "ledsign:0.4", "C-c"  # Send Ctrl+C to stop current process
-    ])
-
-    if file_extension in image_extensions:
-        # Process image
-        image_path = f"../rpi-rgb-led-matrix/user-images/{file_name}"
-        with open(image_path, "wb") as f:
-            f.write(content)
-
-        # Resize image
-        subprocess.run([
-            "convert",
-            image_path,
-            "-resize", "128x128!",
-            f"../rpi-rgb-led-matrix/user-images/resized-{file_name}"
-        ])
-
-        # Send new display command to LED sign pane
-        subprocess.run([
-            "tmux", "send-keys", "-t", "ledsign:0.4",
-            f"cd ~/leetcode-leaderboard && source leetcode-led/bin/activate && cd ~/leetcode-leaderboard/rpi-rgb-led-matrix && "
-            f"sudo ./utils/led-image-viewer --led-rows=64 --led-cols=64 "
-            f"--led-chain=4 --led-gpio-mapping=adafruit-hat --led-slowdown-gpio=4 "
-            f"--led-pixel-mapper=U-mapper ./user-images/resized-{file_name}",
-            "C-m"
-        ])
-
-        return {"message": "Image processed and displayed successfully"}
-
-    elif file_extension in video_extensions:
-        # Handle video
-        video_path = f"../rpi-rgb-led-matrix/user-vids/{file_name}"
-        frames_dir = f"../rpi-rgb-led-matrix/{Path(file_name).stem}-frames"
-        
-        # Check if frames directory already exists
-        if not os.path.exists(frames_dir):
-            # Save video file
-            with open(video_path, "wb") as f:
-                f.write(content)
-
-            # Create frames directory
-            os.makedirs(frames_dir, exist_ok=True)
-
-            # Convert video to frames
-            subprocess.run([
-                "ffmpeg",
-                "-i", f"./user-vids/{file_name}",
-                "-vf", "fps=24,scale=128:128",
-                f"{Path(file_name).stem}-frames/frame_%04d.ppm"
-            ], cwd="../rpi-rgb-led-matrix")
-        
-        # Kill current display in the LED sign pane
+    try:
+        # Kill the current process with Ctrl+C and Enter
         subprocess.run([
             "tmux", "send-keys", "-t", "ledsign:0.4", "C-c"
-        ])
-
-        # Send command to display video frames
+        ], check=True)
         subprocess.run([
-            "tmux", "send-keys", "-t", "ledsign:0.4",
-            f"cd ~/leetcode-leaderboard && source leetcode-led/bin/activate && cd ~/leetcode-leaderboard/rpi-rgb-led-matrix && "
-            f"sudo ./utils/led-image-viewer --led-rows=64 --led-cols=64 "
-            f"--led-chain=4 --led-gpio-mapping=adafruit-hat --led-slowdown-gpio=4 "
-            f"--led-pixel-mapper=U-mapper -f -D24 ./{Path(file_name).stem}-frames/frame_*.ppm",
-            "C-m"
-        ])
-        print(f"Displaying video: {Path(file_name).stem}-frames/frame_*.ppm")
+            "tmux", "send-keys", "-t", "ledsign:0.4", "Enter"
+        ], check=True)
+        await asyncio.sleep(0.5)  # Give it time to kill the process
 
-        return {"message": "Video processed and displayed successfully"}
+        if file_extension in image_extensions:
+            # Process image
+            image_path = f"../rpi-rgb-led-matrix/user-images/{file_name}"
+            with open(image_path, "wb") as f:
+                f.write(content)
 
-    else:
-        return {"error": "Unsupported file type"}
+            subprocess.run([
+                "convert",
+                image_path,
+                "-resize", "128x128!",
+                f"../rpi-rgb-led-matrix/user-images/resized-{file_name}"
+            ], check=True)
+
+            # Send cd command and display command
+            subprocess.run([
+                "tmux", "send-keys", "-t", "ledsign:0.4", 
+                "cd ~/leetcode-leaderboard/rpi-rgb-led-matrix", "Enter"
+            ], check=True)
+            await asyncio.sleep(0.2)
+
+            display_command = (
+                f"sudo ./utils/led-image-viewer --led-rows=64 --led-cols=64 "
+                f"--led-chain=4 --led-gpio-mapping=adafruit-hat --led-slowdown-gpio=4 "
+                f"--led-pixel-mapper=U-mapper ./user-images/resized-{file_name}"
+            )
+            
+            subprocess.run([
+                "tmux", "send-keys", "-t", "ledsign:0.4", display_command, "Enter"
+            ], check=True)
+
+            return {"message": "Image processed and displayed successfully"}
+
+        elif file_extension in video_extensions:
+            # Handle video processing similarly
+            video_path = f"../rpi-rgb-led-matrix/user-vids/{file_name}"
+            frames_dir = f"../rpi-rgb-led-matrix/{Path(file_name).stem}-frames"
+            
+            # Check if frames already exist
+            if not os.path.exists(frames_dir) or not os.listdir(frames_dir):
+                with open(video_path, "wb") as f:
+                    f.write(content)
+
+                os.makedirs(frames_dir, exist_ok=True)
+
+                subprocess.run([
+                    "ffmpeg",
+                    "-i", video_path,
+                    "-vf", "fps=24,scale=128:128",
+                    f"{frames_dir}/frame_%04d.ppm"
+                ], check=True)
+
+            # Send cd command with literal keystrokes
+            subprocess.run([
+                "tmux", "send-keys", "-l", "-t", "ledsign:0.4", 
+                "cd ~/leetcode-leaderboard/rpi-rgb-led-matrix"
+            ], check=True)
+            subprocess.run([
+                "tmux", "send-keys", "-t", "ledsign:0.4", "Enter"
+            ], check=True)
+            await asyncio.sleep(1)
+
+            # Send the video display command with literal keystrokes
+            video_command = (
+                f"sudo ./utils/led-image-viewer --led-rows=64 --led-cols=64 "
+                f"--led-chain=4 --led-gpio-mapping=adafruit-hat --led-slowdown-gpio=4 "
+                f"--led-pixel-mapper=U-mapper -f -D50 {frames_dir}/frame_*.ppm"
+            )
+            
+            subprocess.run([
+                "tmux", "send-keys", "-l", "-t", "ledsign:0.4", video_command
+            ], check=True)
+            subprocess.run([
+                "tmux", "send-keys", "-t", "ledsign:0.4", "Enter"
+            ], check=True)
+
+            return {"message": "Video processed and displayed successfully"}
+
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Subprocess error in upload_image: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error in upload_image: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+def is_within_active_hours():
+    """Returns True if the current time is between 9 AM - 9 PM."""
+    now = datetime.now().hour
+    return 10 <= now < 20
 
 @app.on_event("startup")
-@repeat_every(seconds=300)
+@repeat_every(seconds=1800) #Runs every 30 minutes
 async def update_stats_periodically() -> None:
     try:
         db_file = get_db_file()

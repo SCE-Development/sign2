@@ -15,8 +15,8 @@ const Buttons = () => {
                 Leaderboard
             </button>
             <button
-                className={location.pathname === '/announcement' ? 'active' : ''}
-                onClick={() => navigate('/announcement')}
+            //className={location.pathname === '/announcement' ? 'active' : ''}
+            //onClick={() => navigate('/announcement')}
             >
                 Announcement
             </button>
