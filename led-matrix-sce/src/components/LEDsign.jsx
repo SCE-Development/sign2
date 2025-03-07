@@ -8,7 +8,7 @@ const LEDsign = () => {
             <div className="led-preview">
                 <iframe
                     id="led-frame"
-                    src="http://localhost:8888" // URL of the emulator
+                    src="http://192.168.69.123:8888" // URL of the emulator
                     title="LED Emulator"
                     scrolling="no"
                 />
