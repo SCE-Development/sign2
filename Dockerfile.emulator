@@ -1,0 +1,26 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy RGBMatrixEmulator
+COPY RGBMatrixEmulator/ ./RGBMatrixEmulator/
+
+# Install the package and required dependencies
+RUN cd RGBMatrixEmulator && pip install -e . && \
+    pip install requests
+
+# Copy both the leaderboard script and samplebase from samples
+COPY RGBMatrixEmulator/samples/leaderboard.py .
+COPY RGBMatrixEmulator/samples/samplebase.py .
+
+# Expose port 8888
+EXPOSE 8888
+
+# Run the emulator
+CMD ["python3", "leaderboard.py", "--led-rows=128", "--led-cols=64", "--led-chain=2"]
