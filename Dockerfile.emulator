@@ -11,16 +11,23 @@ RUN apt-get update && apt-get install -y \
 # Copy RGBMatrixEmulator
 COPY RGBMatrixEmulator/ ./RGBMatrixEmulator/
 
-# Install the package and required dependencies
-RUN cd RGBMatrixEmulator && pip install -e . && \
-    pip install requests
+# Install the package and dependencies
+RUN cd RGBMatrixEmulator && \
+    pip install -e . && \
+    pip install requests tornado websockets pillow
 
-# Copy both the leaderboard script and samplebase from samples
+# Copy the sample files
 COPY RGBMatrixEmulator/samples/leaderboard.py .
 COPY RGBMatrixEmulator/samples/samplebase.py .
+COPY RGBMatrixEmulator/samples/emulator_config.json .
+
+# Create fonts directory and copy font files
+RUN mkdir -p fonts
+COPY RGBMatrixEmulator/samples/fonts/* ./fonts/
 
 # Expose port 8888
 EXPOSE 8888
 
-# Run the emulator
+# Run the emulator using the config file
+ENV EMULATOR_CONFIG=/app/emulator_config.json
 CMD ["python3", "leaderboard.py", "--led-rows=128", "--led-cols=64", "--led-chain=2"]

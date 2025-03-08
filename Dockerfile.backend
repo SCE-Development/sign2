@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Create directory for database
+RUN mkdir -p /app/data
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -18,8 +21,12 @@ COPY core_files/ ./core_files/
 # Copy any other necessary files
 COPY .env .
 
-# Expose the port your FastAPI app runs on
-EXPOSE 8001
+# Set environment variable for database location
+ENV DB_PATH=/app/data/leetcode.db
 
-# Command to run both main.py and leetcode_client.py
+# Expose the ports
+EXPOSE 8001
+EXPOSE 5000
+
+# Command to run both services
 CMD ["sh", "-c", "python3 core_files/leetcode_client.py & python3 core_files/main.py"]

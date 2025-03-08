@@ -49,7 +49,7 @@ logging.basicConfig(
 )
 
 def get_db_file():
-    return 'leetcode.db'
+    return os.getenv('DB_PATH', '../data/leetcode.db')
 
 
 

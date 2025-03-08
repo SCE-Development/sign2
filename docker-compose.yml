@@ -7,22 +7,13 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - "8001:8001"
+      - "5000:5000"
     environment:
       - API_KEY=${API_KEY}
+      - DB_PATH=/app/data/leetcode.db
     volumes:
-      - ./leetcode.db:/app/leetcode.db
-
-  frontend:
-    build:
-      context: ./led-matrix-sce
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_MAIN_URL=https://sce.sjsu.edu/leetcode/api
-      - VITE_API_KEY=${API_KEY}
-    depends_on:
-      - backend
+      - ./data:/app/data
+    restart: unless-stopped
 
   emulator:
     build:
@@ -34,3 +25,4 @@ services:
       - ./RGBMatrixEmulator:/app/RGBMatrixEmulator
     depends_on:
       - backend
+    restart: unless-stopped
