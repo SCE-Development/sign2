@@ -57,6 +57,16 @@
     height: fit-content;
 }
 
+.register-panel-centered {
+    grid-column: 1 / span 2;
+    justify-self: center;
+    min-width: 300px;
+    max-width: 500px;
+    height: fit-content;
+    margin: 0 auto;
+    padding-right: 60px;
+}
+
 /* Media query for smaller screens */
 @media (max-width: 1200px) {
     .grid-container {

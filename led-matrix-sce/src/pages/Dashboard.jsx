@@ -6,6 +6,8 @@ import AdminList from '../components/AdminList';
 import Buttons from '../components/Buttons';
 export const Dashboard = () => {
   const [userData, setUserData] = useState([]);
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdmin = urlParams.get('isAdmin') === 'true';
 
   return (
     <div className='containter'>
@@ -16,12 +18,14 @@ export const Dashboard = () => {
         <div className="button-container">
           <Buttons />
         </div>
-        <div className="register-panel">
+        <div className={isAdmin ? "register-panel" : "register-panel-centered"}>
           <RegisterUser userData={userData} setUserData={setUserData} />
         </div>
-        <div className="admin-panel">
-          <AdminList userData={userData} />
-        </div>
+        {isAdmin && (
+          <div className="admin-panel">
+            <AdminList userData={userData} />
+          </div>
+        )}
       </div>
     </div>
   )

@@ -98,6 +98,7 @@ const AdminList = ({ userData }) => {
                             {isEditing && (
                                 <div className="admin-panel-actions">
                                     <button
+                                        disabled={true}
                                         className="admin-panel-update-button"
                                         onClick={() => {
                                             const newUsername = document.querySelector(
