@@ -18,9 +18,11 @@ export const Dashboard = () => {
         <div className="button-container">
           <Buttons />
         </div>
-        <div className={isAdmin ? "register-panel" : "register-panel-centered"}>
-          <RegisterUser userData={userData} setUserData={setUserData} />
-        </div>
+        {isAdmin && (
+          <div className="register-panel">
+            <RegisterUser userData={userData} setUserData={setUserData} />
+          </div>
+        )}
         {isAdmin && (
           <div className="admin-panel">
             <AdminList userData={userData} />
