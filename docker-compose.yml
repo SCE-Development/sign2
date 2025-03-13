@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8001:8001"
+      - "5000:5000"
+    environment:
+      - API_KEY=${API_KEY}
+      - DB_PATH=/app/data/leetcode.db
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  emulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./RGBMatrixEmulator:/app/RGBMatrixEmulator
+    depends_on:
+      - backend
+    restart: unless-stopped

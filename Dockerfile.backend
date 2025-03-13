@@ -1,0 +1,32 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directory for database
+RUN mkdir -p /app/data
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the core_files directory
+COPY core_files/ ./core_files/
+
+# Copy any other necessary files
+COPY .env .
+
+# Set environment variable for database location
+ENV DB_PATH=/app/data/leetcode.db
+
+# Expose the ports
+EXPOSE 8001
+EXPOSE 5000
+
+# Command to run both services
+CMD ["sh", "-c", "python3 core_files/leetcode_client.py & python3 core_files/main.py"]
