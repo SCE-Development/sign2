@@ -59,6 +59,3 @@ test_db.py
 
 #ignore rpi-rgb-led-matrix
 rpi-rgb-led-matrix/
-
-#ignore the emulator
-RGBMatrixEmulator/
