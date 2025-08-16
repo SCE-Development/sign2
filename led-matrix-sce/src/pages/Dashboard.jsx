@@ -13,7 +13,7 @@ export const Dashboard = () => {
     <div className='containter'>
       <div className='grid-container'>
         <div className="led-sign">
-          <LEDsign />
+          {/* <LEDsign /> */}
         </div>
         <div className="button-container">
           <Buttons />
