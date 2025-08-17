@@ -143,8 +143,8 @@ async def upload_image(file: UploadFile = File(...), api_key: str = Security(get
     file_extension = Path(file_name).suffix.lower()
 
     # Define image and video extensions
-    image_extensions = {'.png', '.jpg', '.jpeg', '.bmp'}
-    video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.gif'}
+    image_extensions = {".png", ".jpg", ".jpeg", ".bmp"}
+    video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".gif"}
 
     try:
         # Kill the current process with Ctrl+C and Enter
@@ -256,7 +256,7 @@ async def update_stats_periodically() -> None:
         await update_all_users_stats(db_file)
     except sqlite3.Error as e:
         logging.error(f"Error updating stats: {e}")  # Log the error
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error updating stats: {e}")
+        print(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Error updating stats: {e}")
 
 @app.on_event("startup")
 @repeat_every(seconds=300)  # Runs every 300 seconds
@@ -265,7 +265,7 @@ async def update_weekly_db():
     try:
         db_file = get_db_file()
         update_weekly_db(db_file)
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updated weekly progress!")
+        print(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Updated weekly progress!")
     except sqlite3.Error as e:
         logging.error(f"Error updating weekly stats: {e}")  # Log the error
         print(f"Error updating weekly stats: {e}")
@@ -275,12 +275,12 @@ async def update_weekly_db():
 async def reset_weekly_db():
     """ Resets weekly stats every Monday between 9:00 am - 9:05 am """
     try:
-        tz = pytz.timezone('America/Los_Angeles')
+        tz = pytz.timezone("America/Los_Angeles")
         now = datetime.now(tz)
         if now.weekday() == 0 and 9 <= now.hour < 10 and 0 <= now.minute < 5:
             db_file = get_db_file()
             reset_weekly_db(db_file)
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weekly stats reset! Baseline stored.")
+            print(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Weekly stats reset! Baseline stored.")
     except sqlite3.Error as e:
         logging.error(f"Error resetting weekly database: {e}")  # Log the error
         print(f"Error resetting weekly database: {e}")

@@ -221,8 +221,6 @@ def update_weekly_db(db_file):
                 WHERE username = ?
             """, (easy_progress, medium_progress, hard_progress, total_solved, points, username))
 
-        #print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updated weekly progress!")
-
 def reset_weekly_db(db_file):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
