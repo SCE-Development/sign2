@@ -2,7 +2,6 @@ import sqlite3
 from tabulate import tabulate
 import httpx
 import time
-import traceback
 from constants import LEETCODE_CLIENT_URL
 
 def create_table(db_file, table_name="users"):
@@ -232,4 +231,3 @@ def reset_weekly_db(db_file):
             INSERT INTO weekly_stats (username, first_name, last_name, total_solved, points, easy_solved, medium_solved, hard_solved, baseline_easy, baseline_medium, baseline_hard)
             SELECT username, first_name, last_name, 0, 0, 0, 0, 0, easy_solved, medium_solved, hard_solved FROM users
         """)
-        

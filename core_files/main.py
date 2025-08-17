@@ -51,12 +51,9 @@ def get_db_file():
 
 @app.post("/register") # Before /register/{username}
 async def register_user(user: Users, api_key: str = Security(get_api_key)): # I'm testing the security for the api username:str
-    first_name = user.first_name
-    last_name = user.last_name
-    username = user.username
     api_key = Security(get_api_key)
 
-    url = f"{leetCodeUrl}/{username}"
+    url = f"{leetCodeUrl}/{user.username}"
 
     # retrieve the user's stats from LeetCode
     try:
