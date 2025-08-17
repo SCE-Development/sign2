@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException,Security,Depends,File,UploadFile  
+from fastapi import FastAPI, HTTPException, Security, Depends, File, UploadFile  
 from userSchemas import Users
 import sqlite3
 import pytz
@@ -7,8 +7,7 @@ from secureApi import get_api_key
 import ssl
 import certifi
 import aiohttp
-from sqllite_helper import create_table,add_user,get_top_users,display_all_user,check_user_exists,get_first_place,update_all_users_stats, delete_user, update_user, reset_all_users
-ssl_context = ssl.create_default_context(cafile=certifi.where())
+from core_files.sqlite_helpers import create_table, add_user, get_top_users, display_all_users, check_if_user_exists, get_first_place, update_all_users_stats, delete_user, update_user, reset_all_users, update_weekly_db, reset_weekly_db
 import uvicorn
 from fastapi_utils.tasks import repeat_every
 import asyncio
@@ -22,15 +21,14 @@ import constants
 import subprocess
 from pathlib import Path
 
+load_dotenv()
 HOST = constants.MAIN_HOST
 PORT = constants.MAIN_PORT
 LEETURL=constants.LEETCODE_CLIENT_URL
+leetCodeUrl = f"{LEETURL}"
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 
-app=FastAPI()
-
-leetCodeUrl=f"{LEETURL}"
-
-
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,101 +40,99 @@ app.add_middleware(
 
 # Set up logging
 logging.basicConfig(
-    filename='server.log',
+    filename="server.log",
     level=logging.ERROR,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 
 def get_db_file():
-    return os.getenv('DB_PATH', '../data/leetcode.db')
+    return os.getenv("DB_PATH", "../data/leetcode.db")
 
-
-
-@app.post('/register') ## Before /register/{username}
+@app.post("/register") # Before /register/{username}
 async def register_user(user: Users, api_key: str = Security(get_api_key)): # I'm testing the security for the api username:str
-    first_name=user.first_name
-    last_name=user.last_name
-    username=user.username
-    api_key=Security(get_api_key)
+    first_name = user.first_name
+    last_name = user.last_name
+    username = user.username
+    api_key = Security(get_api_key)
 
-    url=f"{leetCodeUrl}/{username}"
+    url = f"{leetCodeUrl}/{username}"
 
+    # retrieve the user's stats from LeetCode
     try:
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context))as session:
-            async with session.get(f'{url}') as response:
-
-                print(f'Got response')
-                if(response.status == 200):
-
-                    data=await response.json()
-                    easy_solved=data['EASY']
-                    medium_solved=data['MEDIUM']
-                    hard_solved=data["HARD"]
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+            async with session.get(url) as response:
+                print("Got response")
+                if response.status == 200:
+                    data = await response.json()
+                    easy_solved = data["EASY"]
+                    medium_solved = data["MEDIUM"]
+                    hard_solved = data["HARD"]
                   
-                    #Assigned the user equal to the different fields 
-                    user.easy_solved=easy_solved
-                    user.medium_solved=medium_solved
-                    user.hard_solved=hard_solved
+                    # Assigned the user equal to the different fields 
+                    user.easy_solved = easy_solved
+                    user.medium_solved = medium_solved
+                    user.hard_solved = hard_solved
     
                 else:
                     raise HTTPException(status_code=response.status,detail="Couldn't get the correct url")
-               
+    except HTTPException:
+        raise 
     except Exception as e:
         logging.error(f"Error in register_user: {e}")  # Log the error
         raise HTTPException(detail=f"This is what is occurring in the program: {e}")
-    db_file=get_db_file() 
-                   
-    exisiting_user=check_user_exists(db_file, user.username)
-    print("Registering user")
+    
+    # Register the user in the database
+    try:
+        db_file = get_db_file()
+        existing_user = check_if_user_exists(db_file, user.username)
+        print("Registering user")
 
-    if(not exisiting_user):
-        add_user(db_file,user.username,user.first_name,user.last_name,user.total_solved,user.points,user.easy_solved,user.medium_solved,user.hard_solved)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        add_user(db_file, user.username, user.first_name, user.last_name, user.total_solved, user.points, user.easy_solved, user.medium_solved, user.hard_solved)
         add_user(db_file, user.username, user.first_name, user.last_name, 0, 0, 0, 0, 0,  # Weekly progress starts at 0
-         user.easy_solved, user.medium_solved, user.hard_solved,  # Use `users` values as baseline
-         table_name="weekly_stats")
-                    #Not already in the db
-    else:
-        #Returns error to frontend if user already exists
-        raise HTTPException(status_code=400, detail="User already exists")
-    return{
-        'message':'user registered',
-        'userInfo':{
-            'username':user.username,
-            'first_name':user.first_name,
-            'last_name':user.last_name,
-            'total_solved':user.total_solved,
-            'points':user.points
+        user.easy_solved, user.medium_solved, user.hard_solved,  # Use `users` values as baseline
+        table_name="weekly_stats")
+        
+        return {
+            "message": "user registered",
+            "userInfo": {
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "total_solved": user.total_solved,
+                "points": user.points
+            }
         }
-    }
+    except sqlite3.Error as e:
+        logging.error(f"Error during user registration: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-@app.get('/leaderboard')
+@app.get("/leaderboard")
 def get_users():
     try:
         db_file = get_db_file()
         leaderboard_data = get_top_users(db_file, table_name="weekly_stats")
         return leaderboard_data
-    except Exception as e:
+    except sqlite3.Error as e:
         logging.error(f"Error in get_users: {e}")  # Log the error
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-
 @app.post("/deleteUser")
 async def delete_user_endpoint(user: Users):
-    db_file = 'leetcode.db'
+    db_file = get_db_file()
     username = user.username
-    if not check_user_exists(db_file, username):
-        raise HTTPException(status_code=404, detail="User not found")
-
-    try:
-        # Delete the user from the database
+    try:   
+        if not check_if_user_exists(db_file, username):
+            raise HTTPException(status_code=404, detail="User not found")
         await delete_user(db_file, username)
         await delete_user(db_file, username, table_name="weekly_stats")
-    except Exception as e:
+        return {"message": f"User '{username}' has been deleted successfully."}
+    except sqlite3.Error as e:
         logging.error(f"Error in delete_user_endpoint: {e}")  # Log the error
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
-    
-    return {"message": f"User '{username}' has been deleted successfully."}
 
 @app.post("/uploadImage")
 async def upload_image(file: UploadFile = File(...), api_key: str = Security(get_api_key)):
@@ -261,7 +257,7 @@ async def update_stats_periodically() -> None:
     try:
         db_file = get_db_file()
         await update_all_users_stats(db_file)
-    except Exception as e:
+    except sqlite3.Error as e:
         logging.error(f"Error updating stats: {e}")  # Log the error
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error updating stats: {e}")
 
@@ -271,52 +267,11 @@ async def update_weekly_db():
     """ Tracks weekly progress dynamically """
     try:
         db_file = get_db_file()
-        conn = sqlite3.connect(db_file)
-        cursor = conn.cursor()
-
-        # 🚀 Fetch all users from weekly_stats
-        cursor.execute("SELECT username, baseline_easy, baseline_medium, baseline_hard FROM weekly_stats")
-        weekly_users = cursor.fetchall()
-
-        for user in weekly_users:
-            username, baseline_easy, baseline_medium, baseline_hard = user
-
-            #Get latest lifetime stats from `users` table
-            cursor.execute("SELECT easy_solved, medium_solved, hard_solved FROM users WHERE username = ?", (username,))
-            lifetime_stats = cursor.fetchone()
-
-            if not lifetime_stats:
-                print(f"Skipping {username}, no lifetime stats found.")
-                continue
-
-            easy_lifetime, medium_lifetime, hard_lifetime = lifetime_stats
-
-            #Calculate weekly progress (lifetime - baseline)
-            easy_progress = max(0, easy_lifetime - baseline_easy)
-            medium_progress = max(0, medium_lifetime - baseline_medium)
-            hard_progress = max(0, hard_lifetime - baseline_hard)
-
-            #Compute total solved and points
-            total_solved = easy_progress + medium_progress + hard_progress
-            points = (easy_progress * 1) + (medium_progress * 3) + (hard_progress * 5)
-
-            #Update weekly_stats with new progress
-            cursor.execute("""
-                UPDATE weekly_stats 
-                SET easy_solved = ?, medium_solved = ?, hard_solved = ?, total_solved = ?, points = ?
-                WHERE username = ?
-            """, (easy_progress, medium_progress, hard_progress, total_solved, points, username))
-
-        conn.commit()
-        conn.close()
-        #print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updated weekly progress!")
-
-    except Exception as e:
+        update_weekly_db(db_file)
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Updated weekly progress!")
+    except sqlite3.Error as e:
         logging.error(f"Error updating weekly stats: {e}")  # Log the error
         print(f"Error updating weekly stats: {e}")
-
-
-
 
 @app.on_event("startup")
 @repeat_every(seconds=60)  # Runs every 60 seconds and checks if it is Monday to reset weekly stats
@@ -327,24 +282,12 @@ async def reset_weekly_db():
         now = datetime.now(tz)
         if now.weekday() == 0 and 9 <= now.hour < 10 and 0 <= now.minute < 5:
             db_file = get_db_file()
-            conn = sqlite3.connect(db_file)
-            cursor = conn.cursor()
-
-            # 🚀 Reset weekly progress but store new baseline from `users`
-            cursor.execute("DELETE FROM weekly_stats")  # Clear weekly stats table
-            cursor.execute("""
-                INSERT INTO weekly_stats (username, first_name, last_name, total_solved, points, easy_solved, medium_solved, hard_solved, baseline_easy, baseline_medium, baseline_hard)
-                SELECT username, first_name, last_name, 0, 0, 0, 0, 0, easy_solved, medium_solved, hard_solved FROM users
-            """)
-
-            conn.commit()
-            conn.close()
+            reset_weekly_db(db_file)
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weekly stats reset! Baseline stored.")
-    except Exception as e:
+    except sqlite3.Error as e:
         logging.error(f"Error resetting weekly database: {e}")  # Log the error
         print(f"Error resetting weekly database: {e}")
 
- 
 
 if __name__ == "__main__":
     print(f"main.py running on {HOST}:{PORT}")
