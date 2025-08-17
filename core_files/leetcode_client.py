@@ -8,10 +8,10 @@ import constants
 import traceback  # Import traceback for detailed error logging
 
 logging.basicConfig(
-    filename='leetcode_client.log',  # Log file name
+    filename="leetcode_client.log",  # Log file name
     level=logging.ERROR,  # Log only INFO and above
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 
 PORT = constants.LEETCODE_PORT
@@ -25,13 +25,8 @@ leetCodeUrl = "https://leetcode.com/graphql"
 
 @app.get("/{username}")
 async def get_user_stats(username: str):
-
-    # move to contants FIle
-    # query = constants.username_query
     query = constants.USERNAME_QUERY
-    
     variables = {"userSlug": username}
-    # query = constants.headers
     headers = {
         "Content-Type": "application/json",
     }
@@ -44,37 +39,24 @@ async def get_user_stats(username: str):
                 headers=headers,
                 json={"query": query, "variables": variables},
             ) as response:
-               
-
-                if response.status == 200:
-                    try:
-                        data = await response.json()
-
-                        if "errors" in data:
-                            raise HTTPException(
-                                status_code=404, detail="user cannot be found"
-                            )
-
-                        userStats = data["data"]["userProfileUserQuestionProgressV2"][
-                            "numAcceptedQuestions"
-                        ]
-                        return {
-                            entry["difficulty"]: entry["count"] for entry in userStats
-                        }
-
-                    except Exception as e:
-                        print(f"error {e}")
+                if response.status == 200: # successful request
+                    data = await response.json()
+                    if "errors" in data: # error parsing the data from the response
+                        raise HTTPException(
+                            status_code=404, detail="user cannot be found"
+                        )
+                    userStats = data["data"]["userProfileUserQuestionProgressV2"]["numAcceptedQuestions"]
+                    return {
+                        entry["difficulty"]: entry["count"] for entry in userStats
+                    }
 
                 else:
                     # Log the status code and response text for debugging
-                    logging.error(f"Status code: {response.status}, Response: {await response.text()}")
-                    if response.status in [504, 520]:
-                        logging.error(f"Error occurred with status code: {response.status}. Check the server or network.")
-                    raise HTTPException(status_code=400, detail="Invalid Request ")
-
-    except ValueError as e:
-        logging.error(f"ValueError: {e}, Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Data error {e}")
+                    detail = await response.text()
+                    logging.error(f"Status code: {response.status}, Response: {detail}")
+                    raise HTTPException(status_code=response.status, detail=detail)
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Exception: {e}, Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error occurred: {e}")
@@ -82,4 +64,3 @@ async def get_user_stats(username: str):
 if __name__ == "__main__":
     print(f"LeetCode Client running on {HOST}:{PORT}")
     uvicorn.run(app, host=HOST, port=PORT, log_level="error", use_colors=False)
-
