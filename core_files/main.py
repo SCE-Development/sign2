@@ -1,19 +1,18 @@
 from fastapi import FastAPI, HTTPException, Security, Depends, File, UploadFile  
-from userSchemas import Users
+from core_files.user_schema import Users
 import sqlite3
 import pytz
 import os
-from secureApi import get_api_key
+from core_files.secure_api import get_api_key
 import ssl
 import certifi
 import aiohttp
-from core_files.sqlite_helpers import create_table, add_user, get_top_users, display_all_users, check_if_user_exists, get_first_place, update_all_users_stats, delete_user, update_user, reset_all_users, update_weekly_db, reset_weekly_db
+from core_files.sqlite_helpers import add_user, get_top_users, check_if_user_exists, update_all_users_stats, delete_user, update_weekly_db, reset_weekly_db
 import uvicorn
 from fastapi_utils.tasks import repeat_every
 import asyncio
 from datetime import datetime
-import logging  # Add at top
-from tabulate import tabulate
+import logging
 from core_file import get_api_key
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv

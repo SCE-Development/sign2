@@ -1,8 +1,5 @@
-from fastapi import FastAPI, HTTPException, Security, status
+from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery
-from pydantic import BaseModel
-import aiohttp
-import ssl
 
 # Constants for API Key
 import constants  # Ensure this contains a list or set of valid API keys
