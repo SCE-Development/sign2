@@ -172,17 +172,6 @@ def reset_all_users(db_file, table_name="users"):
         cursor.execute(query)
         print(f"{table_name} has been reset to 0 while keeping baseline data.")
 
-def update_user(db_file, username, total_solved=0, points=0, easy_solved=0, medium_solved=0, hard_solved=0, 
-                table_name="users"):
-    with sqlite3.connect(db_file) as conn:
-        cursor = conn.cursor()
-        query = f"""
-            UPDATE {table_name} 
-            SET total_solved = ?, points = ?, easy_solved = ?, medium_solved = ?, hard_solved = ?
-            WHERE username = ?
-        """
-        cursor.execute(query, (total_solved, points, easy_solved, medium_solved, hard_solved, username))
-
 def update_weekly_db(db_file):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
