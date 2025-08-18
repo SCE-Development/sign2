@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class Users(BaseModel):
+class User(BaseModel):
     username: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -20,3 +20,9 @@ class Users(BaseModel):
 
     class Config:
         from_attributes = True
+
+# model for request to modify existing user's information OR to add a new user -> requires camelCase to conform to Clark's lint check
+class UpdateUser(BaseModel):
+    username: str
+    firstName: str
+    lastName: str
