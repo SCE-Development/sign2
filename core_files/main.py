@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Security, Depends, File, UploadFile  
-from core_files.user_schema import Users
+from core_files.user_schema import User, UpdateUser
 import sqlite3
 import pytz
 import os
@@ -7,7 +7,7 @@ from core_files.secure_api import get_api_key
 import ssl
 import certifi
 import aiohttp
-from core_files.sqlite_helpers import add_user, get_top_users, check_if_user_exists, update_all_users_stats, delete_user, update_weekly_db, reset_weekly_db
+from core_files.sqlite_helpers import add_user, get_top_users, check_if_user_exists, update_all_users_stats, delete_user, update_weekly_db, reset_weekly_db, get_all_users, update_user
 import uvicorn
 from fastapi_utils.tasks import repeat_every
 import asyncio
@@ -48,11 +48,18 @@ logging.basicConfig(
 def get_db_file():
     return os.getenv("DB_PATH", "../data/leetcode.db")
 
+@app.get("/health-check")
+def health_check():
+    # check if sign is running, return { status: True/False }
+    pass
+
 @app.post("/register") # Before /register/{username}
-async def register_user(user: Users, api_key: str = Security(get_api_key)): # I'm testing the security for the api username:str
+async def register_user(user: UpdateUser, api_key: str = Security(get_api_key)): # I'm testing the security for the api username:str
     api_key = Security(get_api_key)
 
     url = f"{leetCodeUrl}/{user.username}"
+
+    new_user = User(username=user.username, first_name=user.firstName, last_name=user.lastName)
 
     # retrieve the user's stats from LeetCode
     try:
@@ -66,9 +73,9 @@ async def register_user(user: Users, api_key: str = Security(get_api_key)): # I'
                     hard_solved = data["HARD"]
                   
                     # Assigned the user equal to the different fields 
-                    user.easy_solved = easy_solved
-                    user.medium_solved = medium_solved
-                    user.hard_solved = hard_solved
+                    new_user.easy_solved = easy_solved
+                    new_user.medium_solved = medium_solved
+                    new_user.hard_solved = hard_solved
     
                 else:
                     raise HTTPException(status_code=response.status,detail="Couldn't get the correct url")
@@ -87,19 +94,19 @@ async def register_user(user: Users, api_key: str = Security(get_api_key)): # I'
         if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
         
-        add_user(db_file, user.username, user.first_name, user.last_name, user.total_solved, user.points, user.easy_solved, user.medium_solved, user.hard_solved)
-        add_user(db_file, user.username, user.first_name, user.last_name, 0, 0, 0, 0, 0,  # Weekly progress starts at 0
-        user.easy_solved, user.medium_solved, user.hard_solved,  # Use `users` values as baseline
+        add_user(db_file, new_user.username, new_user.first_name, new_user.last_name, new_user.total_solved, new_user.points, new_user.easy_solved, new_user.medium_solved, new_user.hard_solved)
+        add_user(db_file, new_user.username, new_user.first_name, new_user.last_name, 0, 0, 0, 0, 0,  # Weekly progress starts at 0
+        new_user.easy_solved, new_user.medium_solved, new_user.hard_solved,  # Use `users` values as baseline
         table_name="weekly_stats")
         
         return {
             "message": "user registered",
             "userInfo": {
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "total_solved": user.total_solved,
-                "points": user.points
+                "username": new_user.username,
+                "first_name": new_user.first_name,
+                "last_name": new_user.last_name,
+                "total_solved": new_user.total_solved,
+                "points": new_user.points
             }
         }
     except sqlite3.Error as e:
@@ -117,9 +124,8 @@ def get_users():
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.post("/deleteUser")
-async def delete_user_endpoint(user: Users):
+async def delete_user_endpoint(username: str):
     db_file = get_db_file()
-    username = user.username
     try:   
         if not check_if_user_exists(db_file, username):
             raise HTTPException(status_code=404, detail="User not found")
@@ -129,6 +135,46 @@ async def delete_user_endpoint(user: Users):
     except sqlite3.Error as e:
         logging.error(f"Error in delete_user_endpoint: {e}")  # Log the error
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
+    
+@app.post("/updateUser")
+async def update_user_endpoint(oldUserData: UpdateUser, newUserData: UpdateUser):
+    old_username = oldUserData.username
+    new_username, new_first_name, new_last_name = newUserData.username, newUserData.firstName, newUserData.lastName
+    db_file = get_db_file()
+    try:
+        if not check_if_user_exists(db_file, old_username):
+            raise HTTPException(status_code=404, detail="User not found")
+        # usernames must be unique (primary key) so check if the new username is already used
+        if check_if_user_exists(db_file, new_username):
+            raise HTTPException(status_code=400, detail="Invalid new username: already exists")
+        
+        # update user's details in BOTH tables
+        update_user(db_file, old_username, new_username, new_first_name, new_last_name)
+        update_user(db_file, old_username, new_username, new_first_name, new_last_name, table_name="weekly_stats")
+    except sqlite3.Error as e:
+        logging.error(f"Error in update_user_endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating user: {str(e)}")
+
+@app.get("/getAllUsers")
+async def get_all_users_endpoint():
+    db_file = get_db_file()
+    try:
+        all_users = get_all_users(db_file)
+        if not all_users:
+            return {"message": "No users found"}
+        # this endpoint called for displaying registered users -> only uses username, name
+        users = [
+            {
+                "username": user[0],
+                "firstName": user[1],
+                "lastName": user[2]
+            }
+            for user in all_users
+        ]
+        return users
+    except sqlite3.Error as e:
+        print(f"Error in getAllUsers: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching all users: {str(e)}")
 
 @app.post("/uploadImage")
 async def upload_image(file: UploadFile = File(...), api_key: str = Security(get_api_key)):

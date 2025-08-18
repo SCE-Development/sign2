@@ -8,7 +8,7 @@ def create_table(db_file, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
 
-        query_table = f"""
+        query = f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             username TEXT PRIMARY KEY,
             first_name TEXT,
@@ -20,7 +20,7 @@ def create_table(db_file, table_name="users"):
             hard_solved INTEGER DEFAULT 0
         );
         """
-        cursor.execute(query_table)
+        cursor.execute(query)
         print(f"{table_name} table is ready")
 
 def add_user(db_file, username, first_name, last_name, total_solved=0, points=0, easy_solved=0, medium_solved=0, hard_solved=0, 
@@ -44,28 +44,30 @@ def add_user(db_file, username, first_name, last_name, total_solved=0, points=0,
         else:
             print(f"Invalid table name: {table_name}")
 
-def update_user(db_file, username, total_solved, points, easy_solved=0, medium_solved=0, hard_solved=0, table_name="users"):
+def update_user(db_file, old_username, new_username, new_first_name, new_last_name, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
         query = f"""
-        UPDATE {table_name}
-        SET total_solved = ?, points = ?, easy_solved = ?, medium_solved = ?, hard_solved = ?
-        WHERE username = ?
+            UPDATE {table_name}
+            SET
+                username = ?,
+                first_name = ?,
+                last_name = ?
+            WHERE username = ?
         """
-        cursor.execute(query, (total_solved, points, easy_solved, medium_solved, hard_solved, username))
+        cursor.execute(query, (new_username, new_first_name, new_last_name, old_username))
 
-def display_all_users(db_file, table_name="users"):
+def get_all_users(db_file, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
+        query = f"SELECT * FROM {table_name}"
+        cursor.execute(query)
         output = cursor.fetchall()
-        column_names = [description[0] for description in cursor.description]
-
         if output:
             print(f"Displaying all registered users for {table_name}")
-            return tabulate(output, headers=column_names, tablefmt="grid")
-        else:
-            return "No users found in the database."
+            return output
+        print("No users found in the database.")
+        return None
 
 def get_top_users(db_file, table_name="users"):
     with sqlite3.connect(db_file) as conn:
@@ -73,9 +75,9 @@ def get_top_users(db_file, table_name="users"):
         assert table_name in ["users", "weekly_stats"], f"Invalid table: {table_name}"
         
         query = f"""
-        SELECT username, first_name, last_name, total_solved, points, easy_solved, medium_solved, hard_solved
-        FROM {table_name}
-        ORDER BY points DESC
+            SELECT username, first_name, last_name, total_solved, points, easy_solved, medium_solved, hard_solved
+            FROM {table_name}
+            ORDER BY points DESC
         """
         cursor.execute(query)
         users = cursor.fetchall()
@@ -103,19 +105,16 @@ def get_top_users(db_file, table_name="users"):
 def check_if_user_exists(db_file, username, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        query_table = f"SELECT COUNT(1) FROM {table_name} WHERE username=? LIMIT 1"
-
-        cursor.execute(query_table, (username,))
+        query = f"SELECT COUNT(1) FROM {table_name} WHERE username=? LIMIT 1"
+        cursor.execute(query, (username,))
         existing_user = cursor.fetchone()
-
         return bool(existing_user and existing_user[0] == 1)
 
 def get_first_place(db_file, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        query_table = f"SELECT * FROM {table_name} ORDER BY points DESC LIMIT 1"
-
-        cursor.execute(query_table)
+        query = f"SELECT * FROM {table_name} ORDER BY points DESC LIMIT 1"
+        cursor.execute(query)
         column_names = [description[0] for description in cursor.description]
         data = cursor.fetchall()
 
@@ -127,11 +126,11 @@ def get_first_place(db_file, table_name="users"):
         
         return data
 
-def delete_user(db_file, username , table_name="users"):
+def delete_user(db_file, username, table_name="users"):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        query_table = f"DELETE FROM {table_name} WHERE username=?"
-        cursor.execute(query_table, (username,))
+        query = f"DELETE FROM {table_name} WHERE username=?"
+        cursor.execute(query, (username,))
         print(f"{username} has been deleted")
 
 async def fetch_user_stats(username):
@@ -187,16 +186,16 @@ def update_user(db_file, username, total_solved=0, points=0, easy_solved=0, medi
 def update_weekly_db(db_file):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-
-        # Fetch all users from weekly_stats
-        cursor.execute("SELECT username, baseline_easy, baseline_medium, baseline_hard FROM weekly_stats")
+        query = "SELECT username, baseline_easy, baseline_medium, baseline_hard FROM weekly_stats"
+        cursor.execute(query)
         weekly_users = cursor.fetchall()
 
         for user in weekly_users:
             username, baseline_easy, baseline_medium, baseline_hard = user
 
             # Get latest lifetime stats from `users` table
-            cursor.execute("SELECT easy_solved, medium_solved, hard_solved FROM users WHERE username = ?", (username,))
+            query = "SELECT easy_solved, medium_solved, hard_solved FROM users WHERE username = ?"
+            cursor.execute(query, (username,))
             lifetime_stats = cursor.fetchone()
 
             if not lifetime_stats:
@@ -215,17 +214,21 @@ def update_weekly_db(db_file):
             points = (easy_progress * 1) + (medium_progress * 3) + (hard_progress * 5)
 
             # Update weekly_stats with new progress
-            cursor.execute("""
+            query = """
                 UPDATE weekly_stats 
                 SET easy_solved = ?, medium_solved = ?, hard_solved = ?, total_solved = ?, points = ?
                 WHERE username = ?
-            """, (easy_progress, medium_progress, hard_progress, total_solved, points, username))
+            """
+            cursor.execute(query, (easy_progress, medium_progress, hard_progress, total_solved, points, username))
 
 def reset_weekly_db(db_file):
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM weekly_stats")  # Clear weekly stats table
-        cursor.execute("""
+        query = "DELETE FROM weekly_stats"
+        cursor.execute(query)  # Clear weekly stats table
+
+        query = """
             INSERT INTO weekly_stats (username, first_name, last_name, total_solved, points, easy_solved, medium_solved, hard_solved, baseline_easy, baseline_medium, baseline_hard)
             SELECT username, first_name, last_name, 0, 0, 0, 0, 0, easy_solved, medium_solved, hard_solved FROM users
-        """)
+        """
+        cursor.execute(query)
