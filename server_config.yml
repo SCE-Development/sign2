@@ -1,0 +1,10 @@
+api_key: API KEY LOL
+leetcode_polling_interval: 5m
+port: 8000
+sqlite3_file_name: users.db
+local_timezone: America/Los_Angeles
+
+points:
+  easy: 1
+  medium: 3
+  hard: 5
