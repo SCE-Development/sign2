@@ -43,7 +43,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
             logger.exception("Unable to create urls table")
             return False
 
-def get_users_as_leaderboard(sqlite_file: str, start_date: datetime.datetime, end_date: datetime.datetime):
+def get_users_as_leaderboard(sqlite_file: str, start_date: str, end_date: str):
     """
     Returns the difference in easy/medium/hard between start_date and now
     for each user in the users table.
@@ -90,7 +90,9 @@ def get_users_as_leaderboard(sqlite_file: str, start_date: datetime.datetime, en
     with sqlite3.connect(sqlite_file) as conn:
         conn.row_factory = sqlite3.Row  # allows dict-like access
         cursor = conn.cursor()
-        cursor.execute(query, {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()})
+        cursor.execute(
+            query, {"start_date": start_date, "end_date": end_date}
+        )
         rows = cursor.fetchall()
 
         result = []

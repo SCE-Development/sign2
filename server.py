@@ -45,9 +45,14 @@ def leaderboard():
         )
 
         start_of_week_utc = start_of_week_local.astimezone(datetime.timezone.utc)
-        now = datetime.datetime.now(tz)
+        now_utc = now_local.astimezone(datetime.timezone.utc)
+
+        # Format dates to match SQLite's string format
+        start_date_str = start_of_week_utc.strftime("%Y-%m-%d %H:%M:%S")
+        end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
+
         users = sqlite_helpers.get_users_as_leaderboard(
-            SQLITE_FILE_NAME, start_date=start_of_week_utc, end_date=now
+            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
         )
         for user in users:
             user["points"] = (
@@ -108,6 +113,7 @@ def debug():
 
 def poll_leetcode():
     while not stop_event.is_set():
+        logger.info("Polling LeetCode now...")
         try:
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
             for user in all_users:
