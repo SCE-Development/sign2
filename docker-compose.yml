@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sce-led-matrix
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./modules:/app/modules
+      - ./server.py:/app/server.py
+      - ./server_config.yml:/app/server_config.yml
+      - ./requirements.txt:/app/requirements.txt
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1

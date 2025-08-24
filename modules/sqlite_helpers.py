@@ -1,15 +1,12 @@
 import datetime
-import logging
 import sqlite3
-import typing
-import zoneinfo
 
 from modules.logger import logger
 
 
 def maybe_create_table(sqlite_file: str) -> bool:
     """
-    Creates the leetcode_snapshots table if it doesn't exist.
+    Creates the tables if they don't exist.
     """
     with sqlite3.connect(sqlite_file) as conn:
         cursor = conn.cursor()
@@ -35,11 +32,10 @@ def maybe_create_table(sqlite_file: str) -> bool:
                     );
                 """
             )
-
             cursor.execute(
                 """
-                    CREATE INDEX IF NOT EXISTS idx_user_created_atat 
-                    ON leetcode_snapshots(user_slug, created_atat);
+                    CREATE INDEX IF NOT EXISTS idx_user_created_at 
+                    ON leetcode_snapshots(user_slug, created_at);
                 """
             )
             return True
@@ -64,7 +60,7 @@ def get_users_as_leaderboard(sqlite_file: str, start_date: datetime.datetime, en
             FROM leetcode_snapshots s2
             WHERE s2.user_slug = s1.user_slug
               AND s2.created_at >= :start_date
-            ORDER BY s2.created_at ASC
+            ORDER BY ABS(strftime('%s', s2.created_at) - strftime('%s', :start_date))
             LIMIT 1 
         )
     ),
@@ -78,8 +74,7 @@ def get_users_as_leaderboard(sqlite_file: str, start_date: datetime.datetime, en
             SELECT created_at
             FROM leetcode_snapshots s2
             WHERE s2.user_slug = s1.user_slug
-              AND s2.created_at <= :end_date
-            ORDER BY s2.created_at DESC
+            ORDER BY ABS(strftime('%s', s2.created_at) - strftime('%s', :end_date))
             LIMIT 1
         )
     )
@@ -117,13 +112,23 @@ def store_snapshot(
     """
     with sqlite3.connect(sqlite_file) as conn:
         cursor = conn.cursor()
+        # Check if an identical row already exists
         cursor.execute(
             """
-                INSERT INTO leetcode_snapshots (user_slug, easy, medium, hard)
-                VALUES (?, ?, ?, ?)
+                SELECT COUNT(1) FROM leetcode_snapshots
+                WHERE user_slug = ? AND easy = ? AND medium = ? AND hard = ?
             """,
             (username, easy, medium, hard),
         )
+        exists = cursor.fetchone()[0]
+        if not exists:
+            cursor.execute(
+                """
+                    INSERT INTO leetcode_snapshots (user_slug, easy, medium, hard)
+                    VALUES (?, ?, ?, ?)
+                """,
+                (username, easy, medium, hard),
+            )
 
 
 def add_user(sqlite_file: str, username: str) -> None:

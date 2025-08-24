@@ -22,7 +22,7 @@ with open(arguments.config, "r") as stream:
     try:
         data = yaml.safe_load(stream)
         API_KEY = data.get("api_key", "NOTHING_REALLY")
-        POLLING_INTERVAL = data.get("leetcode_polling_interval", "5m")
+        POLLING_INTERVAL = data.get("leetcode_polling_interval", "300")
         PORT = data.get("port", 8000)
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
@@ -55,44 +55,47 @@ def leaderboard():
                 + user["medium"] * POINTS["medium"]
                 + user["hard"] * POINTS["hard"]
             )
-        return users
+        users_sorted = sorted(users, key=lambda u: u["points"], reverse=True)
+        return users_sorted
     except Exception as e:
         logger.exception(f"Error fetching leaderboard: {str(e)}")
-        return {"error": str(e)}
+        return {"error": str(e), "status_code": 500}
 
 
 @app.post("/user/add")
 async def add_user(request: Request):
     try:
         data = await request.json()
-        username = data.get("username")
+        username = data.get("username", "")
+        if not username:
+            raise HTTPException(status_code=400, detail="Username must be populated")
         if sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
             raise HTTPException(status_code=400, detail="User already exists")
         sqlite_helpers.add_user(SQLITE_FILE_NAME, username)
-        return {"detail": "User added successfully"}
+        return {"detail": f"{username} added successfully"}
+    except HTTPException as e:
+        logger.exception(f"Error adding user: {str(e)}")
+        return {"error": str(e), "status_code": e.status_code}
     except Exception as e:
         logger.exception(f"Error adding user: {str(e)}")
-        return {"error": str(e)}
+        return {"error": str(e), "status_code": 500}
 
 
 @app.post("/user/remove")
 async def remove_user(request: Request):
     try:
         data = await request.json()
-        username = data.get("username")
+        username = data.get("username", "")
         if not sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
             raise HTTPException(status_code=404, detail="User not found")
         sqlite_helpers.delete_user(SQLITE_FILE_NAME, username)
-        return {"detail": "User removed successfully"}
+        return {"detail": f"{username} removed successfully"}
+    except HTTPException as e:
+        logger.exception(f"Error removing user: {str(e)}")
+        return {"error": str(e), "status_code": e.status_code}
     except Exception as e:
         logger.exception(f"Error removing user: {str(e)}")
-        return {"error": str(e)}
-
-
-@app.get("/clear_tables")
-def clear_all_tables():
-    sqlite_helpers.clear_tables(SQLITE_FILE_NAME)
-    return {"detail": "All tables cleared"}
+        return {"error": str(e), "status_code": 500}
 
 
 @app.get("/debug")
@@ -108,33 +111,25 @@ def poll_leetcode():
         try:
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
             for user in all_users:
-                result = leetcode_helpers.get_leetcode_problems_solved(user)
-                for snapshot in result:
-                    sqlite_helpers.store_snapshot(
-                        SQLITE_FILE_NAME,
-                        snapshot.user,
-                        snapshot.easy,
-                        snapshot.medium,
-                        snapshot.hard,
-                    )
+                snapshot = leetcode_helpers.get_leetcode_problems_solved(user)
+                sqlite_helpers.store_snapshot(
+                    SQLITE_FILE_NAME,
+                    snapshot.user,
+                    snapshot.easy,
+                    snapshot.medium,
+                    snapshot.hard,
+                )
         except Exception as e:
             logger.exception(f"Error polling LeetCode: {str(e)}")
 
         # Sleep but wake up if stop_event is set
-        stop_event.wait(30)
+        stop_event.wait(POLLING_INTERVAL)
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     stop_event.set()
-
-
-# we need a function that every 30 seconds (hardcoded for now) polls leetcode
-# use leetcode_helpers, iterate over the return value, then pass the dataclass into sqlite helpers
-# call store_snapshot
-# make a thread like
-# https://github.com/SCE-Development/sce-tv/blob/b154d52730114d6a27a59b582da06241e7516055/server.py#L656
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()

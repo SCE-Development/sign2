@@ -86,7 +86,7 @@ def get_leetcode_problems_solved(username: str):
             logger.warning(
                 f"for username {username}, unknown difficulty key {difficulty} in entry {entry}"
             )
-        yield LeetcodeSnapshot(
+        return LeetcodeSnapshot(
             user=username,
             easy=difficulty_mapping[DIFFICULTY_EASY],
             medium=difficulty_mapping[DIFFICULTY_MEDIUM],

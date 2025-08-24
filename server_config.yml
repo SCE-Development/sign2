@@ -1,5 +1,5 @@
 api_key: API KEY LOL
-leetcode_polling_interval: 5m
+leetcode_polling_interval: 300
 port: 8000
 sqlite3_file_name: users.db
 local_timezone: America/Los_Angeles
