@@ -42,6 +42,12 @@ class Metrics(enum.Enum):
         ["path", "code"]
     )
 
+    LEETCODE_API_GAUGE = (
+        "leetcode_api_gauge",
+        "Gauge for LeetCode API responses",
+        prometheus_client.Gauge,
+    )
+
     def __init__(self, title, description, prometheus_type, label=()):
         self.title = title
         self.description = description
