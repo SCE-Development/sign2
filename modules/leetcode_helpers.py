@@ -1,8 +1,8 @@
 import dataclasses
-
 import requests
 
 from modules.logger import logger
+from modules.metrics import MetricsHandler
 
 
 LEETCODE_BASE_URL = "https://leetcode.com/graphql"
@@ -29,6 +29,7 @@ class LeetcodeSnapshot:
     medium: int
     hard: int
 
+metrics_handler = MetricsHandler.instance()
 
 def get_leetcode_problems_solved(username: str):
     variables = {"userSlug": username}
@@ -37,13 +38,15 @@ def get_leetcode_problems_solved(username: str):
     }
 
     try:
-        response = requests.post(
-            LEETCODE_BASE_URL,
-            headers=headers,
-            json={"query": SOLVED_QUERY, "variables": variables},
-            timeout=10,
-        )
+        with MetricsHandler.api_latency.time():
+            response = requests.post(
+                LEETCODE_BASE_URL,
+                headers=headers,
+                json={"query": SOLVED_QUERY, "variables": variables},
+                timeout=10,
+            )
 
+        MetricsHandler.api_response_codes.labels(response.status_code).inc()
         if response.status_code != 200:
             logger.warning(
                 f"received non 200 response {response.status_code} for user {username}"
@@ -63,6 +66,8 @@ def get_leetcode_problems_solved(username: str):
             .get("numAcceptedQuestions", [])
         )
         if not user_stats:
+            MetricsHandler.null_users_found.labels(username).inc()
+            logger.warning(f"null user stats for username {username}")
             return None
 
         difficulty_mapping = {
