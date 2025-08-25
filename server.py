@@ -2,7 +2,6 @@ import datetime
 import sys
 import uvicorn
 import threading
-import time
 import zoneinfo
 
 from fastapi import FastAPI, HTTPException, Request
@@ -14,7 +13,9 @@ from modules import sqlite_helpers
 from modules.logger import logger
 
 
-stop_event = threading.Event()
+leetcode_stop_event = threading.Event()
+clear_db_stop_event = threading.Event()
+
 app = FastAPI()
 arguments = args.get_args()
 
@@ -27,6 +28,7 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
+        LEADERBOARD_INTERVAL = data.get("leaderboard_interval", "604800")  # Default to one week
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
@@ -112,7 +114,7 @@ def debug():
 
 
 def poll_leetcode():
-    while not stop_event.is_set():
+    while not leetcode_stop_event.is_set():
         logger.info("Polling LeetCode now...")
         try:
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
@@ -128,17 +130,42 @@ def poll_leetcode():
         except Exception as e:
             logger.exception(f"Error polling LeetCode: {str(e)}")
 
-        # Sleep but wake up if stop_event is set
-        stop_event.wait(POLLING_INTERVAL)
+        # Sleep but wake up if leetcode_stop_event is set
+        leetcode_stop_event.wait(POLLING_INTERVAL)
+
+
+def clear_leetcode_snapshots():
+    while not clear_db_stop_event.is_set():
+        try:
+            today = datetime.datetime.today()
+            if today.weekday() == 5 and today.hour == 23 and today.minute == 55: # reset every Saturday at 11:55pm -> gives time before the tracking starts
+
+                start_date = today - datetime.timedelta(days=6) # saturday is 6 days after sunday
+                end_date = today
+                
+                start_date_str = start_date.strftime("%m/%d/%Y")
+                end_date_str = end_date.strftime("%m/%d/%Y")
+                
+                logger.info(f"Processing week from {start_date_str} to {end_date_str}")
+                sqlite_helpers.find_weekly_winners(SQLITE_FILE_NAME, start_date_str, end_date_str)
+
+                logger.info(f"Clearing LeetCode snapshots for the week from {start_date_str} to {end_date_str}")
+                sqlite_helpers.reset_leetcode_snapshots(SQLITE_FILE_NAME)
+        except Exception as e:
+            logger.exception(f"Error clearing LeetCode snapshots: {str(e)}")
+
+        clear_db_stop_event.wait(POLLING_INTERVAL) # very frequent checks for a once a week thing, but we can fix later
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
-    stop_event.set()
+    leetcode_stop_event.set()
+    clear_db_stop_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
+    threading.Thread(target=clear_leetcode_snapshots).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)

@@ -1,4 +1,3 @@
-import datetime
 import sqlite3
 
 from modules.logger import logger
@@ -29,6 +28,18 @@ def maybe_create_table(sqlite_file: str) -> bool:
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_slug TEXT NOT NULL,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                """
+            )
+            cursor.execute(
+                """
+                    CREATE TABLE IF NOT EXISTS weekly_winners (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        start_date DATETIME NOT NULL,
+                        end_date DATETIME NOT NULL,
+                        first_place TEXT NOT NULL,
+                        second_place TEXT NOT NULL,
+                        third_place TEXT NOT NULL
                     );
                 """
             )
@@ -237,3 +248,34 @@ def get_all_leetcode_snapshots(sqlite_file: str):
             }
             for row in rows
         ]
+
+
+def find_weekly_winners(sqlite_file: str, start_date: str, end_date: str):
+    """
+    Find the the top 3 scorers from this week from the database.
+    """
+    all_users = get_users_as_leaderboard(sqlite_file, start_date=start_date, end_date=end_date)
+    all_users.sort(key=lambda u: u["points"], reverse=True)
+    top3 = [user["user"] for user in all_users[:3]]
+    with sqlite3.connect(sqlite_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+                INSERT INTO weekly_winners (start_date, end_date, first_place, second_place, third_place)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+            (start_date, end_date, top3[0], top3[1], top3[2]),
+        )
+
+
+def reset_leetcode_snapshots(sqlite_file: str):
+    """
+    Reset all LeetCode snapshots in the database.
+    """
+    with sqlite3.connect(sqlite_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+                DELETE FROM leetcode_snapshots
+            """
+        )

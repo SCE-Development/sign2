@@ -1,8 +1,9 @@
 api_key: API KEY LOL
-leetcode_polling_interval: 300
+leetcode_polling_interval: 300 # query LeetCode every 5 minutes
 port: 8000
 sqlite3_file_name: users.db
 local_timezone: America/Los_Angeles
+leaderboard_interval: 604800 # one week in between resets
 
 points:
   easy: 1
