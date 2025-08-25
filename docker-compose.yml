@@ -12,6 +12,7 @@ services:
       - ./server.py:/app/server.py
       - ./server_config.yml:/app/server_config.yml
       - ./requirements.txt:/app/requirements.txt
+      - ./users.db:/app/users.db
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
