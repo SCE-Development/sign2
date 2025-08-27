@@ -22,10 +22,10 @@ class Metrics(enum.Enum):
         prometheus_client.Gauge,
     )
 
-    SIGN_UPDATE_ERRORS = (
-        "sign_update_errors",
-        "Number of times the sign fails to update",
-        prometheus_client.Counter,
+    SIGN_UPDATE_ERROR = (
+        "sign_update_error",
+        "Gauge of the success of updating the sign: 0 for success and 1 for failure",
+        prometheus_client.Gauge,
     )
 
     NULL_USERS_FOUND = (
@@ -42,9 +42,9 @@ class Metrics(enum.Enum):
         ["path", "code"]
     )
 
-    LEETCODE_API_GAUGE = (
-        "leetcode_api_gauge",
-        "Gauge for LeetCode API responses",
+    LEETCODE_API_ERROR = (
+        "leetcode_api_error",
+        "Gauge of the success of API calls to LeetCode: 0 for success and 1 for failure",
         prometheus_client.Gauge,
     )
 

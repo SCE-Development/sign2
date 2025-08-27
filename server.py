@@ -65,9 +65,10 @@ def leaderboard():
             )
         users_sorted = sorted(users, key=lambda u: u["points"], reverse=True)
         MetricsHandler.sign_last_updated.set(int(time.time()))
+        MetricsHandler.sign_update_error.set(0)
         return users_sorted
     except Exception as e:
-        MetricsHandler.sign_update_errors.inc()
+        MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
         return {"error": str(e), "status_code": 500}
 

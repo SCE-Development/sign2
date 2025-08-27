@@ -91,7 +91,7 @@ def get_leetcode_problems_solved(username: str):
             logger.warning(
                 f"for username {username}, unknown difficulty key {difficulty} in entry {entry}"
             )
-            MetricsHandler.leetcode_api_gauge.set(0)
+            MetricsHandler.leetcode_api_error.set(0)
         return LeetcodeSnapshot(
             user=username,
             easy=difficulty_mapping[DIFFICULTY_EASY],
@@ -100,4 +100,4 @@ def get_leetcode_problems_solved(username: str):
         )
     except Exception:
         logger.exception("no!")
-        MetricsHandler.leetcode_api_gauge.set(1)
+        MetricsHandler.leetcode_api_error.set(1)
