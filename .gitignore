@@ -10,3 +10,8 @@ cc/*
 !cc/Makefile
 !cc/text-example
 !cc/text-example.cc
+.pypirc
+*.egg-info/
+dist
+MANIFEST
+tmp
