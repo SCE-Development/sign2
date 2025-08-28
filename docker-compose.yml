@@ -3,7 +3,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     container_name: sce-led-matrix
     ports:
       - "8000:8000"
@@ -13,6 +13,20 @@ services:
       - ./server_config.yml:/app/server_config.yml
       - ./requirements.txt:/app/requirements.txt
       - ./users.db:/app/users.db
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+  
+  emulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator
+    container_name: sce-led-matrix-emulator
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./modules:/app/modules
+      - ./emulator.py:/app/emulator.py
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1

@@ -2,3 +2,11 @@ __pycache__
 *.db
 .venv/
 .vscode/
+nohup*
+*.sql
+emulator_config.json
+.pypirc
+*.egg-info/
+dist
+MANIFEST
+tmp
