@@ -4,3 +4,9 @@ __pycache__
 .vscode/
 nohup*
 *.sql
+emulator_config.json
+.pypirc
+*.egg-info/
+dist
+MANIFEST
+tmp
