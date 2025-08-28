@@ -1,0 +1,33 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy RGBMatrixEmulator
+COPY emulator/ ./emulator/
+
+# Install the package and dependencies
+RUN cd emulator && \
+    pip install -e . && \
+    pip install requests tornado websockets pillow
+
+# Copy the sample files
+COPY emulator/samples/leaderboard.py .
+COPY emulator/samples/samplebase.py .
+COPY emulator/samples/emulator_config.json .
+
+# Create fonts directory and copy font files
+RUN mkdir -p fonts
+COPY emulator/samples/fonts/* ./fonts/
+
+# Expose port 8888
+EXPOSE 8888
+
+# Run the emulator using the config file
+ENV EMULATOR_CONFIG=/app/emulator_config.json
+CMD ["python3", "leaderboard.py", "--led-rows=128", "--led-cols=64", "--led-chain=2"]
