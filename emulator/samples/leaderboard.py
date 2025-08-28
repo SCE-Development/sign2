@@ -90,7 +90,7 @@ class LeaderboardDisplay(SampleBase):
                         if i > self.MAX_ENTRIES:
                             break
 
-                        username = entry["username"][:12]  # Limit username to 12 characters
+                        username = entry["username"][:10]  # Limit username to 10 characters
                         points   = entry["points"]
 
                         # Determine color based on rank
