@@ -2,7 +2,6 @@ import datetime
 import sys
 import uvicorn
 import threading
-import time
 import zoneinfo
 
 from fastapi import FastAPI, HTTPException, Request
@@ -72,11 +71,13 @@ async def add_user(request: Request):
     try:
         data = await request.json()
         username = data.get("username", "")
+        first_name = data.get("first_name", "unknown")
+        last_name = data.get("last_name", "unknown")
         if not username:
             raise HTTPException(status_code=400, detail="Username must be populated")
         if sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
             raise HTTPException(status_code=400, detail="User already exists")
-        sqlite_helpers.add_user(SQLITE_FILE_NAME, username)
+        sqlite_helpers.add_user(SQLITE_FILE_NAME, username, first_name, last_name)
         return {"detail": f"{username} added successfully"}
     except HTTPException as e:
         logger.exception(f"Error adding user: {str(e)}")
@@ -100,6 +101,33 @@ async def remove_user(request: Request):
         return {"error": str(e), "status_code": e.status_code}
     except Exception as e:
         logger.exception(f"Error removing user: {str(e)}")
+        return {"error": str(e), "status_code": 500}
+ 
+
+@app.get("/getAllUsers")
+async def get_all_users():
+    try:
+        users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
+        return {"users": users}
+    except Exception as e:
+        logger.exception(f"Error fetching all users: {str(e)}")
+        return {"error": str(e), "status_code": 500}
+
+
+@app.post("/checkIfUserExists")
+async def check_if_user_exists(request: Request):
+    try:
+        data = await request.json()
+        username = data.get("username", "")
+        if not username:
+            raise HTTPException(status_code=400, detail="Username must be populated")
+        exists = sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username)
+        return {"exists": exists}
+    except HTTPException as e:
+        logger.exception(f"Error checking if user exists: {str(e)}")
+        return {"error": str(e), "status_code": e.status_code}
+    except Exception as e:
+        logger.exception(f"Error checking if user exists: {str(e)}")
         return {"error": str(e), "status_code": 500}
 
 
