@@ -1,8 +1,8 @@
 import datetime
+import logging
 import sys
 import uvicorn
 import threading
-import time
 import zoneinfo
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -16,7 +16,12 @@ from modules.logger import logger
 from modules.metrics import MetricsHandler
 
 
-stop_event = threading.Event()
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
+
+
+leetcode_stop_event = threading.Event()
+
 app = FastAPI()
 arguments = args.get_args()
 
@@ -114,7 +119,8 @@ def debug():
     # dump all contents of the tables sorted by created_at for both tables
     leetcode_snapshots = sqlite_helpers.get_all_leetcode_snapshots(SQLITE_FILE_NAME)
     users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
-    return {"leetcode_snapshots": leetcode_snapshots, "users": users}
+    weekly_baselines = sqlite_helpers.get_all_weekly_baselines(SQLITE_FILE_NAME)
+    return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
 
 
 @app.middleware("http")
@@ -133,8 +139,7 @@ def get_metrics():
 
 
 def poll_leetcode():
-    while not stop_event.is_set():
-        logger.info("Polling LeetCode now...")
+    while not leetcode_stop_event.is_set():
         try:
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
             for user in all_users:
@@ -149,14 +154,14 @@ def poll_leetcode():
         except Exception as e:
             logger.exception(f"Error polling LeetCode: {str(e)}")
 
-        # Sleep but wake up if stop_event is set
-        stop_event.wait(POLLING_INTERVAL)
+        # Sleep but wake up if leetcode_stop_event is set
+        leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
-    stop_event.set()
+    leetcode_stop_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
