@@ -1,4 +1,5 @@
 import datetime
+import logging
 import sys
 import uvicorn
 import threading
@@ -13,8 +14,11 @@ from modules import sqlite_helpers
 from modules.logger import logger
 
 
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
+
+
 leetcode_stop_event = threading.Event()
-clear_db_stop_event = threading.Event()
 
 app = FastAPI()
 arguments = args.get_args()
@@ -110,12 +114,12 @@ def debug():
     # dump all contents of the tables sorted by created_at for both tables
     leetcode_snapshots = sqlite_helpers.get_all_leetcode_snapshots(SQLITE_FILE_NAME)
     users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
-    return {"leetcode_snapshots": leetcode_snapshots, "users": users}
+    weekly_baselines = sqlite_helpers.get_all_weekly_baselines(SQLITE_FILE_NAME)
+    return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
 
 
 def poll_leetcode():
     while not leetcode_stop_event.is_set():
-        logger.info("Polling LeetCode now...")
         try:
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
             for user in all_users:
@@ -134,38 +138,13 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
-def clear_leetcode_snapshots():
-    while not clear_db_stop_event.is_set():
-        try:
-            today = datetime.datetime.today()
-            if today.weekday() == 5 and today.hour == 23 and today.minute == 55: # reset every Saturday at 11:55pm -> gives time before the tracking starts
-
-                start_date = today - datetime.timedelta(days=6) # saturday is 6 days after sunday
-                end_date = today
-                
-                start_date_str = start_date.strftime("%m/%d/%Y")
-                end_date_str = end_date.strftime("%m/%d/%Y")
-                
-                logger.info(f"Processing week from {start_date_str} to {end_date_str}")
-                sqlite_helpers.find_weekly_winners(SQLITE_FILE_NAME, start_date_str, end_date_str)
-
-                logger.info(f"Clearing LeetCode snapshots for the week from {start_date_str} to {end_date_str}")
-                sqlite_helpers.reset_leetcode_snapshots(SQLITE_FILE_NAME)
-        except Exception as e:
-            logger.exception(f"Error clearing LeetCode snapshots: {str(e)}")
-
-        clear_db_stop_event.wait(POLLING_INTERVAL) # very frequent checks for a once a week thing, but we can fix later
-
-
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
-    clear_db_stop_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
-    threading.Thread(target=clear_leetcode_snapshots).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
