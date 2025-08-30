@@ -2,5 +2,10 @@ __pycache__
 *.db
 .venv/
 .vscode/
-*.out
 *.sql
+*.out
+emulator_config.json
+cc/*
+!cc/Makefile
+!cc/text-example
+!cc/text-example.cc
