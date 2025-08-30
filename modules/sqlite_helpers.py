@@ -32,8 +32,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
                     );
                 """
             )
-            cursor.execute( # store users' scores at the beginning of the week -> stores whatever score was before the diff
-                # one row per user per week -> what was their score at the end of last week
+            cursor.execute(
                 """
                     CREATE TABLE IF NOT EXISTS weekly_baselines (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,6 +72,7 @@ def maybe_create_table(sqlite_file: str) -> bool:
         except Exception:
             logger.exception("Unable to create sqlite tables")
             return False
+
 
 def get_users_as_leaderboard(
     sqlite_file: str, start_date: str, end_date: str
@@ -120,19 +120,19 @@ def get_users_as_leaderboard(
     with sqlite3.connect(sqlite_file) as conn:
         conn.row_factory = sqlite3.Row  # allows dict-like access
         cursor = conn.cursor()
-        cursor.execute(
-            query, {"start_date": start_date, "end_date": end_date}
-        )
+        cursor.execute(query, {"start_date": start_date, "end_date": end_date})
         rows = cursor.fetchall()
 
         result = []
         for row in rows:
-            result.append({
-                "user": row["user_slug"],
-                "easy": row["easy_diff"],
-                "medium": row["medium_diff"],
-                "hard": row["hard_diff"],
-            })
+            result.append(
+                {
+                    "user": row["user_slug"],
+                    "easy": row["easy_diff"],
+                    "medium": row["medium_diff"],
+                    "hard": row["hard_diff"],
+                }
+            )
         return result
 
 
@@ -245,6 +245,7 @@ def clear_tables(sqlite_file: str):
             """,
         )
 
+
 def get_all_leetcode_snapshots(sqlite_file: str):
     """
     Get all LeetCode snapshots from the database.
@@ -295,4 +296,3 @@ def get_all_weekly_baselines(sqlite_file: str):
             }
             for row in rows
         ]
-    
