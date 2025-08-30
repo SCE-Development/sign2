@@ -46,32 +46,32 @@ def maybe_create_table(sqlite_file: str) -> bool:
             )
             cursor.execute(
                 """
-                    CREATE TRIGGER IF NOT EXISTS first_weekly_snapshot
-                    AFTER INSERT ON leetcode_snapshots
-                    BEGIN
-                        INSERT INTO weekly_baselines (user_slug, easy, medium, hard, created_at)
-                        SELECT NEW.user_slug, NEW.easy, NEW.medium, NEW.hard, NEW.created_at
-                        WHERE NOT EXISTS (
-                            SELECT 1
-                            FROM leetcode_snapshots
-                            WHERE user_slug = NEW.user_slug
-                            AND strftime('%W', created_at, 'localtime') = strftime('%W', NEW.created_at, 'localtime')
-                            AND created_at < NEW.created_at
-                            AND CAST(strftime('%w', created_at, 'localtime') AS INTEGER) >= 0
-                        );
-                    END;
+                    DROP TRIGGER IF EXISTS first_weekly_snapshot;
                 """
             )
-            cursor.execute(
-                """
-                    CREATE INDEX IF NOT EXISTS idx_user_created_at 
-                    ON leetcode_snapshots(user_slug, created_at);
-                """
-            )
-            return True
+            cursor.execute("DROP TRIGGER IF EXISTS first_weekly_snapshot;")
+            cursor.execute("""
+                CREATE TRIGGER first_weekly_snapshot
+                AFTER INSERT ON leetcode_snapshots
+                BEGIN
+                    INSERT INTO weekly_baselines (user_slug, easy, medium, hard, created_at)
+                    SELECT NEW.user_slug, NEW.easy, NEW.medium, NEW.hard, NEW.created_at
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM weekly_baselines
+                        WHERE user_slug = NEW.user_slug
+                        AND strftime('%Y-%W', created_at, 'localtime') = strftime('%Y-%W', NEW.created_at, 'localtime')
+                    );
+                END;
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_created_at 
+                ON leetcode_snapshots(user_slug, created_at);
+            """)
         except Exception:
             logger.exception("Unable to create sqlite tables")
             return False
+    return True
 
 
 def get_users_as_leaderboard(
@@ -114,8 +114,10 @@ def get_users_as_leaderboard(
            COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
     FROM users u
     LEFT JOIN latest_weekly_snapshot_per_user s ON u.user_slug = s.user_slug
-    LEFT JOIN end_snap e ON u.user_slug = e.user_slug;
+    LEFT JOIN end_snap e ON u.user_slug = e.user_slug
+    where s.user_slug IS NOT NULL;
     """
+
 
     with sqlite3.connect(sqlite_file) as conn:
         conn.row_factory = sqlite3.Row  # allows dict-like access
