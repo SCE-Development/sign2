@@ -38,7 +38,7 @@ def get_leetcode_problems_solved(username: str):
     }
 
     try:
-        with MetricsHandler.api_latency.time():
+        with MetricsHandler.leetcode_api_latency.time():
             response = requests.post(
                 LEETCODE_BASE_URL,
                 headers=headers,
@@ -46,7 +46,7 @@ def get_leetcode_problems_solved(username: str):
                 timeout=10,
             )
 
-        MetricsHandler.api_response_codes.labels(response.status_code).inc()
+        MetricsHandler.leetcode_api_response_codes.labels(response.status_code).inc()
         if response.status_code != 200:
             logger.warning(
                 f"received non 200 response {response.status_code} for user {username}"

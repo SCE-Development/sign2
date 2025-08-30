@@ -139,7 +139,7 @@ def debug():
 @app.middleware("http")
 async def track_response_codes(request: Request, call_next):
     response = await call_next(request)
-    MetricsHandler.http_code.labels(request.url.path, response.status_code).inc()
+    MetricsHandler.endpoint_hits.labels(request.url.path, response.status_code).inc()
     return response
 
 

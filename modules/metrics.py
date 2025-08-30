@@ -4,14 +4,14 @@ import prometheus_client
 class Metrics(enum.Enum):
     
     API_RESPONSE_CODES = (
-        "api_response_codes",
+        "leetcode_api_response_codes",
         "Response codes of requests made to LeetCode GraphQL API",
         prometheus_client.Counter,
         ["code"],
     )
 
     API_LATENCY = (
-        "api_latency",
+        "leetcode_api_latency",
         "Latency / response time of requests made to LeetCode GraphQL API",
         prometheus_client.Summary
     )
@@ -35,8 +35,8 @@ class Metrics(enum.Enum):
         ["username"]
     )
 
-    HTTP_CODE = (
-        "http_code",
+    ENDPOINT_HITS = (
+        "endpoint_hits",
         "Count of each HTTP Response code",
         prometheus_client.Counter,
         ["path", "code"]
