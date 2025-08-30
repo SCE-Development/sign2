@@ -5,13 +5,15 @@ import uvicorn
 import threading
 import zoneinfo
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 import yaml
+import prometheus_client
 
 from modules import args
 from modules import leetcode_helpers
 from modules import sqlite_helpers
 from modules.logger import logger
+from modules.metrics import MetricsHandler
 
 
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -36,6 +38,7 @@ with open(arguments.config, "r") as stream:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
 
+metrics_handler = MetricsHandler.instance()
 
 @app.get("/")
 def leaderboard():
@@ -66,8 +69,11 @@ def leaderboard():
                 + user["hard"] * POINTS["hard"]
             )
         users_sorted = sorted(users, key=lambda u: u["points"], reverse=True)
+        MetricsHandler.sign_last_updated.set(int(time.time()))
+        MetricsHandler.sign_update_error.set(0)
         return users_sorted
     except Exception as e:
+        MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
         return {"error": str(e), "status_code": 500}
 
@@ -115,6 +121,21 @@ def debug():
     users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
     weekly_baselines = sqlite_helpers.get_all_weekly_baselines(SQLITE_FILE_NAME)
     return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
+
+
+@app.middleware("http")
+async def track_response_codes(request: Request, call_next):
+    response = await call_next(request)
+    MetricsHandler.http_code.labels(request.url.path, response.status_code).inc()
+    return response
+
+
+@app.get("/metrics")
+def get_metrics():
+    return Response(
+        media_type="text/plain",
+        content=prometheus_client.generate_latest()
+    )
 
 
 def poll_leetcode():
