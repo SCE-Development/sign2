@@ -157,6 +157,8 @@ def poll_leetcode():
             all_users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
             for user in all_users:
                 snapshot = leetcode_helpers.get_leetcode_problems_solved(user)
+                if snapshot is None:
+                    continue
                 sqlite_helpers.store_snapshot(
                     SQLITE_FILE_NAME,
                     snapshot.user,
