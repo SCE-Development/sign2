@@ -32,7 +32,6 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
-        LEADERBOARD_INTERVAL = data.get("leaderboard_interval", "604800")  # Default to one week
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
