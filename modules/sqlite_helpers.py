@@ -159,7 +159,7 @@ def store_snapshot(
         return
 
 
-def add_user(sqlite_file: str, username: str) -> None:
+def add_user(sqlite_file: str, username: str, first_name: str, last_name: str) -> None:
     """
     Add a new user to the database.
     """
@@ -168,10 +168,10 @@ def add_user(sqlite_file: str, username: str) -> None:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                    INSERT INTO users (user_slug)
-                    VALUES (?)
+                    INSERT INTO users (user_slug, first_name, last_name)
+                    VALUES (?, ?, ?)
                 """,
-                (username,),
+                (username, first_name, last_name),
             )
     except sqlite3.IntegrityError:
         return
@@ -203,13 +203,19 @@ def get_all_users(sqlite_file: str):
         cursor = conn.cursor()
         cursor.execute(
             """
-                SELECT user_slug
+                SELECT user_slug, first_name, last_name
                 FROM users
             """
         )
         rows = cursor.fetchall()
-        return [row[0] for row in rows]
-
+        return [
+            {
+                "username": row[0],
+                "firstName": row[1],
+                "lastName": row[2],
+            }
+            for row in rows
+        ]
 
 def check_if_user_exists(sqlite_file: str, username: str):
     """
