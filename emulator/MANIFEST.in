@@ -1,0 +1,6 @@
+include RGBMatrixEmulator/icon.ico
+include RGBMatrixEmulator/icon.png
+include RGBMatrixEmulator/adapters/browser_adapter/static/index.html
+include RGBMatrixEmulator/adapters/browser_adapter/static/assets/client.js
+include RGBMatrixEmulator/adapters/browser_adapter/static/assets/icon.ico
+include RGBMatrixEmulator/adapters/browser_adapter/static/assets/styles.css
