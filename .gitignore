@@ -5,6 +5,7 @@ __pycache__
 *.sql
 *.out
 emulator_config.json
+.DS_Store
 
 cc/*
 !cc/Makefile
