@@ -32,7 +32,7 @@ with open(arguments.config, "r") as stream:
     try:
         data = yaml.safe_load(stream)
         API_KEY = data.get("api_key", "NOTHING_REALLY")
-        POLLING_INTERVAL = data.get("leetcode_polling_interval", "300")
+        POLLING_INTERVAL = data.get("leetcode_polling_interval", 300)
         PORT = data.get("port", 8000)
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
