@@ -109,8 +109,8 @@ async def add_user(request: Request):
     try:
         data = await request.json()
         username = data.get("username", "")
-        first_name = data.get("first_name", "unknown")
-        last_name = data.get("last_name", "unknown")
+        first_name = data.get("firstName", "unknown")
+        last_name = data.get("lastName", "unknown")
         if not username:
             raise HTTPException(status_code=400, detail="Username must be populated")
         if sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
