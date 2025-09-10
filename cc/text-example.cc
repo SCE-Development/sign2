@@ -84,7 +84,7 @@ void DisplayLeaderboard(RGBMatrix * canvas,
   // Loop over the array, displaying username & points
   int rank = 1;
   for (auto & item: leaderboard) {
-    std::string username = item.value("user", "unknown");
+    std::string username = item.value("username", "unknown");
     if (username.length() > 10) {
       username = username.substr(0, 10); // Cut to 15 characters max
     }

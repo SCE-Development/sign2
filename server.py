@@ -5,6 +5,7 @@ import uvicorn
 import threading
 import zoneinfo
 import time
+from enum import Enum
 
 from fastapi import FastAPI, HTTPException, Request, Response
 import yaml
@@ -22,6 +23,7 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
+leaderboard_switch_stop_event = threading.Event()
 
 app = FastAPI()
 arguments = args.get_args()
@@ -34,6 +36,7 @@ with open(arguments.config, "r") as stream:
         PORT = data.get("port", 8000)
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
+        QUERY_SWITCH_INTERVAL = data.get("query_switch_interval", 600)
         POINTS = data.get("points", {})
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
@@ -41,38 +44,60 @@ with open(arguments.config, "r") as stream:
 
 metrics_handler = MetricsHandler.instance()
 
+class LeaderboardType(Enum):
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+current_leaderboard_type = LeaderboardType.WEEKLY
+
+
 @app.get("/")
 def leaderboard():
     try:
         tz = zoneinfo.ZoneInfo(TIME_ZONE)
         now_local = datetime.datetime.now(tz)
-        # Set start of week to Sunday 12am
-        days_since_sunday = now_local.weekday() + 1 if now_local.weekday() < 6 else 0
-        start_of_week_local = now_local - datetime.timedelta(days=days_since_sunday)
-        start_of_week_local = start_of_week_local.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        if current_leaderboard_type == LeaderboardType.WEEKLY:
+            # Set start of week to Sunday 12am
+            days_since_sunday = now_local.weekday() + 1 if now_local.weekday() < 6 else 0
+            start_of_week_local = now_local - datetime.timedelta(days=days_since_sunday)
+            start_of_week_local = start_of_week_local.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
 
-        start_of_week_utc = start_of_week_local.astimezone(datetime.timezone.utc)
-        now_utc = now_local.astimezone(datetime.timezone.utc)
+            start_of_week_utc = start_of_week_local.astimezone(datetime.timezone.utc)
+            now_utc = now_local.astimezone(datetime.timezone.utc)
 
-        # Format dates to match SQLite's string format
-        start_date_str = start_of_week_utc.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
+            # Format dates to match SQLite's string format
+            start_date_str = start_of_week_utc.strftime("%Y-%m-%d %H:%M:%S")
+            end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
 
-        users = sqlite_helpers.get_users_as_leaderboard(
-            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
-        )
+            users = sqlite_helpers.get_weekly_leaderboard(
+                SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
+            )
+        else: # Monthly
+            # Set start of month to 1st of the month 12am
+            start_of_month_local = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            start_of_month_utc = start_of_month_local.astimezone(datetime.timezone.utc)
+            now_utc = now_local.astimezone(datetime.timezone.utc)
+
+            # Format dates to match SQLite's string format
+            start_date_str = start_of_month_utc.strftime("%Y-%m-%d %H:%M:%S")
+            end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
+
+            users = sqlite_helpers.get_monthly_leaderboard(
+                SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
+            )
+            
         for user in users:
             user["points"] = (
                 user["easy"] * POINTS.get("easy", 1)
                 + user["medium"] * POINTS.get("medium", 3)
                 + user["hard"] * POINTS.get("hard", 5)
             )
-        users_sorted = sorted(users, key=lambda u: u["points"], reverse=True)
+        leaderboard_data = sorted(users, key=lambda u: u["points"], reverse=True)
         MetricsHandler.sign_last_updated.set(int(time.time()))
         MetricsHandler.sign_update_error.set(0)
-        return users_sorted
+        return leaderboard_data
     except Exception as e:
         MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
@@ -174,13 +199,29 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
+def leaderboard_switcher():
+    global current_leaderboard_type
+    while not leaderboard_switch_stop_event.is_set():
+        current_leaderboard_type = (
+            LeaderboardType.MONTHLY
+            if current_leaderboard_type == LeaderboardType.WEEKLY
+            else LeaderboardType.WEEKLY
+        )
+        logger.info(f"now showing {current_leaderboard_type.value} leaderboard")
+          
+        # Sleep but wake up if leaderboard_switch_stop_event is set
+        leaderboard_switch_stop_event.wait(QUERY_SWITCH_INTERVAL)
+
+
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
+    leaderboard_switch_stop_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
+    threading.Thread(target=leaderboard_switcher).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
