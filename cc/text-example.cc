@@ -84,12 +84,24 @@ void DisplayLeaderboard(RGBMatrix * canvas,
   // Loop over the array, displaying username & points
   int rank = 1;
   for (auto & item: leaderboard) {
-    std::string username = item.value("username", "unknown");
-    if (username.length() > 10) {
-      username = username.substr(0, 10); // Cut to 15 characters max
-    }
-    int points = item.value("points", 0);
+    std::string username = "unknown";
+    int points = 0;
 
+    try {
+      if (item.contains("user") && item["user"].is_string()) {
+        username = item["user"];
+      }
+      if (item.contains("points") && item["points"].is_number_integer()) {
+        points = item["points"];
+      }
+    } catch (const std::exception & e) {
+      fprintf(stderr, "Error parsing leaderboard item: %s\n", e.what());
+    }
+
+    if (username.length() > 10) {
+      username = username.substr(0, 10); // Cut to 10 characters max
+    }
+    
     // Display rank. If you don't want rank, just remove `%2d.` from the format
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "%2d. %-10s %10d",
