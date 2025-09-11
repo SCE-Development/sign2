@@ -3,7 +3,6 @@ leetcode_polling_interval: 300 # query LeetCode every 5 minutes
 port: 8000
 sqlite3_file_name: users.db
 local_timezone: America/Los_Angeles
-query_switch_interval: 600 # toggle monthly/weekly every 10 minutes
 
 points:
   easy: 1

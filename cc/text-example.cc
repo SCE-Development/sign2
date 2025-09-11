@@ -51,9 +51,12 @@ std::string FetchLeaderboard(const std::string & url) {
 }
 
 // Function to draw leaderboard data on the LED matrix
-void DisplayLeaderboard(RGBMatrix * canvas,
+void DisplayLeaderboard(
+  RGBMatrix * canvas,
   const rgb_matrix::Font & font,
-    const std::string & leaderboard_data) {
+  const std::string & leaderboard_data,
+  const std::string & leaderboard_type
+){
   // Parse leaderboard JSON (an array of objects)
   json leaderboard;
   try {
@@ -66,15 +69,22 @@ void DisplayLeaderboard(RGBMatrix * canvas,
   // Clear the matrix
   canvas -> Clear();
 
-  // White text color
+  // Header colors: white, gold, red
   Color text_color(255, 255, 255);
   Color header_color(255, 191, 0);
+  Color subheader_color(255, 0, 0);
 
   int x = 1;
   int y = font.baseline() + 2;
 
   // Title
   DrawText(canvas, font, x, y, header_color, nullptr, "   LeetCode Leaderboard", 0);
+  y += font.height() + 2;
+
+  // Leaderboard type
+  char type_buffer[64];
+  snprintf(type_buffer, sizeof(type_buffer), "      %s Stats", leaderboard_type.c_str());
+  DrawText(canvas, font, x, y, subheader_color, nullptr, type_buffer, 0);
   y += font.height() + 2;
 
   // Optional header row
@@ -166,16 +176,23 @@ int main(int argc, char * argv[]) {
   //---------------------------------------------------------------------------
   // 4. Continuously fetch and display leaderboard
   //---------------------------------------------------------------------------
-  const std::string api_url = "http://localhost:8000/";
+  const std::string weekly_url = "http://localhost:8000/weekly";
+  const std::string monthly_url = "http://localhost:8000/monthly";
+  static bool fetch_weekly = true;
 
   while (!interrupt_received) {
+    const std::string api_url = fetch_weekly ? weekly_url : monthly_url;
+
     // Fetch JSON
     std::string leaderboard_data = FetchLeaderboard(api_url);
-    // Display
-    DisplayLeaderboard(canvas, font, leaderboard_data);
+    const std::string leaderboard_type = fetch_weekly ? "Weekly" : "Monthly";
+    fetch_weekly = !fetch_weekly; // Alternate for next time
 
-    // Sleep 60 seconds, or break if interrupted
-    for (int i = 0; i < 60 && !interrupt_received; ++i) {
+    // Display
+    DisplayLeaderboard(canvas, font, leaderboard_data, leaderboard_type);
+
+    // Sleep 5 minutes / 300 seconds, or break if interrupted
+    for (int i = 0; i < 300 && !interrupt_received; ++i) {
       sleep(1);
     }
   }
