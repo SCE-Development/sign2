@@ -74,96 +74,55 @@ def maybe_create_table(sqlite_file: str) -> bool:
     return True
 
 
-def get_weekly_leaderboard(
-    sqlite_file: str, start_date: str, end_date: str
+def get_users_as_leaderboard(
+    sqlite_file: str, start_date: str, end_date: str, weekly: bool
 ) -> list[dict]:
     """
     Returns the difference in easy/medium/hard between start_date and now
     for each user in the users table.
     """
-    query = """
-    WITH latest_weekly_snapshot_per_user AS (
-        SELECT user_slug,
-               easy AS easy_start,
-               medium AS medium_start,
-               hard AS hard_start
-        FROM weekly_baselines wb
-        WHERE created_at = (
-            SELECT MAX(created_at)
-            FROM weekly_baselines wb2
-            WHERE wb2.user_slug = wb.user_slug
-            AND created_at <= :end_date
-        )
-    ),
-    end_snap AS (
-        SELECT user_slug,
-               easy AS easy,
-               medium AS medium,
-               hard AS hard
-        FROM leetcode_snapshots s1
-        WHERE created_at = (
-            SELECT MAX(created_at)
-            FROM leetcode_snapshots s2
-            WHERE s2.user_slug = s1.user_slug
-            AND created_at <= :end_date
-        )
-    )
-    SELECT u.user_slug,
-           COALESCE(e.easy, 0) - COALESCE(s.easy_start, 0) AS easy_diff,
-           COALESCE(e.medium, 0) - COALESCE(s.medium_start, 0) AS medium_diff,
-           COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
-    FROM users u
-    LEFT JOIN latest_weekly_snapshot_per_user s ON u.user_slug = s.user_slug
-    LEFT JOIN end_snap e ON u.user_slug = e.user_slug
-    where s.user_slug IS NOT NULL;
-    """
 
-
-    with sqlite3.connect(sqlite_file) as conn:
-        conn.row_factory = sqlite3.Row  # allows dict-like access
-        cursor = conn.cursor()
-        cursor.execute(query, {"start_date": start_date, "end_date": end_date})
-        rows = cursor.fetchall()
-
-        result = []
-        for row in rows:
-            result.append(
-                {
-                    "username": row["user_slug"],
-                    "easy": row["easy_diff"],
-                    "medium": row["medium_diff"],
-                    "hard": row["hard_diff"],
-                }
+    start_snap_query = f"""
+        {'''
+            WITH start_snap AS (
+                SELECT user_slug,
+                    easy AS easy_start,
+                    medium AS medium_start,
+                    hard AS hard_start
+                FROM weekly_baselines wb
+                WHERE created_at = (
+                    SELECT MAX(created_at)
+                    FROM weekly_baselines wb2
+                    WHERE wb2.user_slug = wb.user_slug
+                    AND created_at <= :end_date
+                )
             )
-        return result
-    
-
-def get_monthly_leaderboard(
-    sqlite_file: str, start_date: str, end_date: str
-) -> list[dict]:
-    """
-    Returns the difference in easy/medium/hard between start_date and now
-    for each user in the users table.
-    """
-    query = """
-        WITH start_snap AS (
-            SELECT user_slug,
-                   easy AS easy_start,
-                   medium AS medium_start,
-                   hard AS hard_start)
-            FROM leetcode_snapshots s1
-            WHERE created_at = (
-                SELECT MIN(created_at)
-                FROM leetcode_snapshots s2
-                WHERE s2.user_slug = s1.user_slug
-                AND created_at >= :start_date
+        ''' if weekly else '''
+            WITH start_snap AS (
+                SELECT user_slug,
+                    easy AS easy_start,
+                    medium AS medium_start,
+                    hard AS hard_start)
+                FROM leetcode_snapshots s1
+                WHERE created_at = (
+                    SELECT MIN(created_at)
+                    FROM leetcode_snapshots s2
+                    WHERE s2.user_slug = s1.user_slug
+                    AND created_at >= :start_date
+                )
             )
-        ),
+        '''
+        }
+    """
+
+    query = f"""
+        {start_snap_query}
+        ,
         end_snap AS (
             SELECT user_slug,
-                   easy AS easy,
-                   medium AS medium,
-                   hard AS hard
+                easy AS easy,
+                medium AS medium,
+                hard AS hard
             FROM leetcode_snapshots s1
             WHERE created_at = (
                 SELECT MAX(created_at)
@@ -173,9 +132,9 @@ def get_monthly_leaderboard(
             )
         )
         SELECT u.user_slug,
-               COALESCE(e.easy, 0) - COALESCE(s.easy_start, 0) AS easy_diff,
-               COALESCE(e.medium, 0) - COALESCE(s.medium_start, 0) AS medium_diff,
-               COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
+            COALESCE(e.easy, 0) - COALESCE(s.easy_start, 0) AS easy_diff,
+            COALESCE(e.medium, 0) - COALESCE(s.medium_start, 0) AS medium_diff,
+            COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
         FROM users u
         LEFT JOIN start_snap s ON u.user_slug = s.user_slug
         LEFT JOIN end_snap e ON u.user_slug = e.user_slug

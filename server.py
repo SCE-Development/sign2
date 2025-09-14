@@ -61,8 +61,8 @@ def weekly_leaderboard():
         start_date_str = start_of_week_utc.strftime("%Y-%m-%d %H:%M:%S")
         end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
 
-        users = sqlite_helpers.get_weekly_leaderboard(
-            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
+        users = sqlite_helpers.get_users_as_leaderboard(
+            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str, weekly=True
         )   
             
         for user in users:
@@ -96,8 +96,8 @@ def monthly_leaderboard():
         start_date_str = start_of_month_utc.strftime("%Y-%m-%d %H:%M:%S")
         end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
 
-        users = sqlite_helpers.get_monthly_leaderboard(
-            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
+        users = sqlite_helpers.get_users_as_leaderboard(
+            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str, weekly=False
         )
 
         for user in users:
