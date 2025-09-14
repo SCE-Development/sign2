@@ -215,7 +215,6 @@ def poll_leetcode():
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
-    leaderboard_switch_stop_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
