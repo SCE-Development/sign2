@@ -5,6 +5,7 @@ import uvicorn
 import threading
 import zoneinfo
 import time
+import httpx
 
 from fastapi import FastAPI, HTTPException, Request, Response
 import yaml
@@ -22,6 +23,9 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
+phone_script_event = threading.Event()
+current_phone_script = ""
+phone_script_lock = threading.Lock()
 
 app = FastAPI()
 arguments = args.get_args()
@@ -35,6 +39,7 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
+        PHONE_SCRIPT_UPDATE_INTERVAL = data.get("phone_script_update_interval", 1800)
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
@@ -111,6 +116,14 @@ def debug():
     return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
 
 
+@app.get("/phone")
+async def get_phone_script():
+    with phone_script_lock:
+        if not current_phone_script:
+            current_phone_script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
+        return {"script": current_phone_script}
+
+
 @app.middleware("http")
 async def track_response_codes(request: Request, call_next):
     response = await call_next(request)
@@ -175,13 +188,39 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
+async def generate_phone_script():
+    global current_phone_script
+    while not phone_script_event.is_set():
+        try:
+            leaderboard_data = await leaderboard()
+            script = "The LeetCode Leaderboard is as follows:"
+            for i, entry in enumerate(leaderboard_data):
+                if i > 9:
+                    break
+                points = entry['points']
+                script += f"\n{entry['username']} is in position {i+1} with {points} {'points' if points > 1 else 'point'}."
+            
+            with phone_script_lock:
+                current_phone_script = script
+            
+        except Exception as e:
+            logger.exception(f"Unexpected error generating phone script: {str(e)}")
+            with phone_script_lock:
+                current_phone_script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
+            
+        # Sleep but wake up if phone_script_event is set
+        phone_script_event.wait(PHONE_SCRIPT_UPDATE_INTERVAL)
+
+
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
+    phone_script_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
+    threading.Thread(target=generate_phone_script).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
