@@ -120,7 +120,7 @@ def debug():
 async def get_phone_script():
     with phone_script_lock:
         if not current_phone_script:
-            raise HTTPException(status_code=503, detail="Phone script not yet generated")
+            current_phone_script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
         return {"script": current_phone_script}
 
 
@@ -191,27 +191,22 @@ def poll_leetcode():
 async def generate_phone_script():
     global current_phone_script
     while not phone_script_event.is_set():
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get("http://localhost:8000/") # later separate into two calls, one for weekly and one for monthly
-                response.raise_for_status()
-                leaderboard_data = response.json()
-                script = "The LeetCode Leaderboard is as follows:"
-                for i, entry in enumerate(leaderboard_data):
-                    if i > 9:
-                        break
-                    points = entry['points']
-                    script += f"\n{entry['user']} is in position {i+1} with {points} {'points' if points > 1 else 'point'}."
-                
-                with phone_script_lock:
-                    current_phone_script = script
-                
-            except httpx.HTTPStatusError as e:
-                logger.exception(f"Error fetching data from leaderboard: {str(e)}")
-            except httpx.RequestError as e:
-                logger.exception(f"Error making request to leaderboard: {str(e)}")
-            except Exception as e:
-                logger.exception(f"Unexpected error generating phone script: {str(e)}")
+        try:
+            leaderboard_data = await leaderboard()
+            script = "The LeetCode Leaderboard is as follows:"
+            for i, entry in enumerate(leaderboard_data):
+                if i > 9:
+                    break
+                points = entry['points']
+                script += f"\n{entry['username']} is in position {i+1} with {points} {'points' if points > 1 else 'point'}."
+            
+            with phone_script_lock:
+                current_phone_script = script
+            
+        except Exception as e:
+            logger.exception(f"Unexpected error generating phone script: {str(e)}")
+            with phone_script_lock:
+                current_phone_script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
             
         # Sleep but wake up if phone_script_event is set
         phone_script_event.wait(PHONE_SCRIPT_UPDATE_INTERVAL)
