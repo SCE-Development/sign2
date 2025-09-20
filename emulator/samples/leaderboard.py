@@ -35,7 +35,7 @@ class LeaderboardDisplay(SampleBase):
             # Extract just username + points for each entry
             return [
                 {
-                    "username": entry.get("user", "unknown"),
+                    "username": entry.get("username", "unknown"),
                     "points": entry.get("points", 0)
                 }
                 for entry in data
@@ -79,7 +79,7 @@ class LeaderboardDisplay(SampleBase):
                 graphics.DrawText(
                     offset_canvas, font,
                     self.LEFT_MARGIN, self.SUBTITLE_Y,
-                    white, "Username       Points"
+                    white, "Username        Points"
                 )
 
                 # 3) Loop over top 5 entries
