@@ -34,7 +34,7 @@ with open(arguments.config, "r") as stream:
     try:
         data = yaml.safe_load(stream)
         API_KEY = data.get("api_key", "NOTHING_REALLY")
-        POLLING_INTERVAL = data.get("leetcode_polling_interval", "300")
+        POLLING_INTERVAL = data.get("leetcode_polling_interval", 300)
         PORT = data.get("port", 8000)
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
@@ -47,37 +47,12 @@ with open(arguments.config, "r") as stream:
 metrics_handler = MetricsHandler.instance()
 
 @app.get("/")
-def leaderboard():
+def get_leaderboard():
     try:
-        tz = zoneinfo.ZoneInfo(TIME_ZONE)
-        now_local = datetime.datetime.now(tz)
-        # Set start of week to Sunday 12am
-        days_since_sunday = now_local.weekday() + 1 if now_local.weekday() < 6 else 0
-        start_of_week_local = now_local - datetime.timedelta(days=days_since_sunday)
-        start_of_week_local = start_of_week_local.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-
-        start_of_week_utc = start_of_week_local.astimezone(datetime.timezone.utc)
-        now_utc = now_local.astimezone(datetime.timezone.utc)
-
-        # Format dates to match SQLite's string format
-        start_date_str = start_of_week_utc.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
-
-        users = sqlite_helpers.get_users_as_leaderboard(
-            SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
-        )
-        for user in users:
-            user["points"] = (
-                user["easy"] * POINTS.get("easy", 1)
-                + user["medium"] * POINTS.get("medium", 3)
-                + user["hard"] * POINTS.get("hard", 5)
-            )
-        users_sorted = sorted(users, key=lambda u: u["points"], reverse=True)
+        leaderboard_data = leaderboard()
         MetricsHandler.sign_last_updated.set(int(time.time()))
         MetricsHandler.sign_update_error.set(0)
-        return users_sorted
+        return leaderboard_data
     except Exception as e:
         MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
@@ -89,8 +64,8 @@ async def add_user(request: Request):
     try:
         data = await request.json()
         username = data.get("username", "")
-        first_name = data.get("first_name", "unknown")
-        last_name = data.get("last_name", "unknown")
+        first_name = data.get("firstName", "unknown")
+        last_name = data.get("lastName", "unknown")
         if not username:
             raise HTTPException(status_code=400, detail="Username must be populated")
         if sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
@@ -162,6 +137,32 @@ def get_metrics():
         media_type="text/plain",
         content=prometheus_client.generate_latest()
     )
+
+
+def leaderboard():
+    tz = zoneinfo.ZoneInfo(TIME_ZONE)
+    now_local = datetime.datetime.now(tz)
+
+    # Set start of month to 1st of the month 12am
+    start_of_month_local = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start_of_month_utc = start_of_month_local.astimezone(datetime.timezone.utc)
+    now_utc = now_local.astimezone(datetime.timezone.utc)
+
+    # Format dates to match SQLite's string format
+    start_date_str = start_of_month_utc.strftime("%Y-%m-%d %H:%M:%S")
+    end_date_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
+
+    users = sqlite_helpers.get_users_as_leaderboard(
+        SQLITE_FILE_NAME, start_date=start_date_str, end_date=end_date_str
+    )
+    for user in users:
+        user["points"] = (
+            user["easy"] * POINTS.get("easy", 1)
+            + user["medium"] * POINTS.get("medium", 3)
+            + user["hard"] * POINTS.get("hard", 5)
+        )
+    leaderboard_data = sorted(users, key=lambda u: u["points"], reverse=True)
+    return leaderboard_data
 
 
 def poll_leetcode():

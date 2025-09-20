@@ -82,40 +82,41 @@ def get_users_as_leaderboard(
     for each user in the users table.
     """
     query = """
-    WITH latest_weekly_snapshot_per_user AS (
-        SELECT user_slug,
-               easy AS easy_start,
-               medium AS medium_start,
-               hard AS hard_start
-        FROM weekly_baselines wb
-        WHERE created_at = (
-            SELECT MAX(created_at)
-            FROM weekly_baselines wb2
-            WHERE wb2.user_slug = wb.user_slug
-            AND created_at <= :end_date
+        WITH start_snap AS (
+            SELECT user_slug,
+                easy AS easy_start,
+                medium AS medium_start,
+                hard AS hard_start
+            FROM leetcode_snapshots s1
+            WHERE created_at = (
+                SELECT MIN(created_at)
+                FROM leetcode_snapshots s2
+                WHERE s2.user_slug = s1.user_slug
+                AND created_at >= :start_date
+            )
+        ),
+        end_snap AS (
+            SELECT user_slug,
+                easy AS easy,
+                medium AS medium,
+                hard AS hard
+            FROM leetcode_snapshots s1
+            WHERE created_at = (
+                SELECT MAX(created_at)
+                FROM leetcode_snapshots s2
+                WHERE s2.user_slug = s1.user_slug
+                AND created_at <= :end_date
+                AND created_at >= :start_date
+            )
         )
-    ),
-    end_snap AS (
-        SELECT user_slug,
-               easy AS easy,
-               medium AS medium,
-               hard AS hard
-        FROM leetcode_snapshots s1
-        WHERE created_at = (
-            SELECT MAX(created_at)
-            FROM leetcode_snapshots s2
-            WHERE s2.user_slug = s1.user_slug
-            AND created_at <= :end_date
-        )
-    )
-    SELECT u.user_slug,
-           COALESCE(e.easy, 0) - COALESCE(s.easy_start, 0) AS easy_diff,
-           COALESCE(e.medium, 0) - COALESCE(s.medium_start, 0) AS medium_diff,
-           COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
-    FROM users u
-    LEFT JOIN latest_weekly_snapshot_per_user s ON u.user_slug = s.user_slug
-    LEFT JOIN end_snap e ON u.user_slug = e.user_slug
-    where s.user_slug IS NOT NULL;
+        SELECT u.user_slug,
+            COALESCE(e.easy, 0) - COALESCE(s.easy_start, 0) AS easy_diff,
+            COALESCE(e.medium, 0) - COALESCE(s.medium_start, 0) AS medium_diff,
+            COALESCE(e.hard, 0) - COALESCE(s.hard_start, 0) AS hard_diff
+        FROM users u
+        LEFT JOIN start_snap s ON u.user_slug = s.user_slug
+        LEFT JOIN end_snap e ON u.user_slug = e.user_slug
+        where s.user_slug IS NOT NULL;
     """
 
 
@@ -129,7 +130,7 @@ def get_users_as_leaderboard(
         for row in rows:
             result.append(
                 {
-                    "user": row["user_slug"],
+                    "username": row["user_slug"],
                     "easy": row["easy_diff"],
                     "medium": row["medium_diff"],
                     "hard": row["hard_diff"],
