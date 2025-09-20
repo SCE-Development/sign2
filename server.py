@@ -47,9 +47,9 @@ with open(arguments.config, "r") as stream:
 metrics_handler = MetricsHandler.instance()
 
 @app.get("/")
-def get_leaderboard():
+async def get_leaderboard():
     try:
-        leaderboard_data = leaderboard()
+        leaderboard_data = await leaderboard()
         MetricsHandler.sign_last_updated.set(int(time.time()))
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
@@ -139,7 +139,7 @@ def get_metrics():
     )
 
 
-def leaderboard():
+async def leaderboard():
     tz = zoneinfo.ZoneInfo(TIME_ZONE)
     now_local = datetime.datetime.now(tz)
 
