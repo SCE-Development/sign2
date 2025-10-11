@@ -44,7 +44,7 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
-        PHONE_SCRIPT_UPDATE_INTERVAL = data.get("phone_script_update_interval", 1800)
+        PHONE_SCRIPT_UPDATE_INTERVAL = data.get("phone_script_update_interval_seconds", 1800)
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
