@@ -6,6 +6,10 @@ import threading
 import zoneinfo
 import time
 import subprocess
+from pathlib import Path
+import boto3
+from dotenv import load_dotenv
+import os
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -17,10 +21,6 @@ from modules import leetcode_helpers
 from modules import sqlite_helpers
 from modules.logger import logger
 from modules.metrics import MetricsHandler
-
-import boto3
-from dotenv import load_dotenv
-import os
 
 
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -123,7 +123,10 @@ def debug():
 
 @app.get("/phone")
 async def get_phone_script():
-    return FileResponse('leetcode_latest.wav', media_type="audio/wav", filename='leetcode_latest.wav')
+    wav_path = os.path.join(os.getcwd(), 'leetcode_latest.wav')
+    if not os.path.exists(wav_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
 
 @app.middleware("http")
@@ -211,18 +214,24 @@ def generate_phone_script():
             OutputFormat='mp3',
             VoiceId='Joanna'
         )
-        mp3_path = f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3'
+
+        OUTPUT_DIR = Path('/app/phone_script')
+        OUTPUT_DIR.mkdir(exist_ok=True)
+
+        mp3_path = OUTPUT_DIR / f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3'
         with open(mp3_path, 'wb') as file:
             file.write(response['AudioStream'].read())
 
+        wav_path = OUTPUT_DIR / 'leetcode_latest.wav'
+
         # Convert mp3 to wav using ffmpeg with compression settings
         subprocess.run([
-            'ffmpeg', '-i', mp3_path,
+            'ffmpeg', '-i', str(mp3_path),
             '-ar', '8000',          # Sample rate: 8kHz 
             '-ac', '1',             # Mono audio
             '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
             '-y',                   # Overwrite output file
-            'leetcode_latest.wav'
+            str(wav_path)
         ], check=True)
 
         os.remove(mp3_path)

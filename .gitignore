@@ -17,3 +17,5 @@ dist
 MANIFEST
 tmp
 .env
+*.wav
+*.mp3
