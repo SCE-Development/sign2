@@ -6,6 +6,10 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY .env .
+
+RUN apt-get update && apt-get install -y ffmpeg
+
 EXPOSE 8000
 
 CMD ["python", "server.py", "--config", "server_config.yml"]

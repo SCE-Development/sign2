@@ -16,3 +16,4 @@ cc/*
 dist
 MANIFEST
 tmp
+.env
