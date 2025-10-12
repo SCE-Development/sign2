@@ -4,7 +4,6 @@ import sys
 import uvicorn
 import threading
 import zoneinfo
-import time
 import subprocess
 import boto3
 import os
@@ -52,7 +51,7 @@ metrics_handler = MetricsHandler.instance()
 def get_leaderboard():
     try:
         leaderboard_data = leaderboard()
-        MetricsHandler.sign_last_updated.set(int(time.time()))
+        MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
     except Exception as e:
@@ -233,7 +232,7 @@ def generate_phone_script():
 
         os.remove(mp3_path)
 
-        MetricsHandler.wav_last_updated.set(int(time.time()))
+        MetricsHandler.wav_last_updated.set(datetime.datetime.now().timestamp())
 
         # Sleep but wake up if phone_script_event is set
         phone_script_event.wait(PHONE_SCRIPT_UPDATE_INTERVAL)
