@@ -40,7 +40,7 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
-        PHONE_SCRIPT_UPDATE_INTERVAL = data.get("phone_script_update_interval_seconds", 1800)
+        LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS = data.get("leaderboard_wav_file_update_interval_seconds", 1800)
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
@@ -235,7 +235,7 @@ def generate_phone_script():
         MetricsHandler.wav_last_updated.set(datetime.datetime.now().timestamp())
 
         # Sleep but wake up if phone_script_event is set
-        phone_script_event.wait(PHONE_SCRIPT_UPDATE_INTERVAL)
+        phone_script_event.wait(LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS)
 
 
 @app.on_event("shutdown")

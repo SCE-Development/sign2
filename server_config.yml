@@ -3,7 +3,7 @@ leetcode_polling_interval: 900 # query LeetCode every 15 minutes
 port: 8000
 sqlite3_file_name: users.db
 local_timezone: America/Los_Angeles
-phone_script_update_interval_seconds: 1800 # update every 30 minutes
+leaderboard_wav_file_update_interval_seconds: 1800 # update every 30 minutes
 
 points:
   easy: 1
