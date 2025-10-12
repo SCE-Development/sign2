@@ -123,7 +123,7 @@ def debug():
 
 @app.get("/phone")
 async def get_phone_script():
-    wav_path = os.path.join(os.getcwd(), 'leetcode_latest.wav')
+    wav_path = os.path.join('/tmp', 'leetcode_latest.wav')
     if not os.path.exists(wav_path):
         raise HTTPException(status_code=404, detail="Audio file not found")
     return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
@@ -215,7 +215,7 @@ def generate_phone_script():
             VoiceId='Joanna'
         )
 
-        OUTPUT_DIR = Path('/app/phone_script')
+        OUTPUT_DIR = Path('/tmp')
         OUTPUT_DIR.mkdir(exist_ok=True)
 
         mp3_path = OUTPUT_DIR / f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3'
