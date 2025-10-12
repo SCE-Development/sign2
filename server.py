@@ -6,9 +6,7 @@ import threading
 import zoneinfo
 import time
 import subprocess
-from pathlib import Path
 import boto3
-from dotenv import load_dotenv
 import os
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -32,7 +30,6 @@ phone_script_event = threading.Event()
 phone_script_lock = threading.Lock()
 
 app = FastAPI()
-load_dotenv()
 arguments = args.get_args()
 
 with open(arguments.config, "r") as stream:
@@ -204,8 +201,8 @@ def generate_phone_script():
                 points = entry['points']
                 script += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
             
-        except Exception as e:
-            logger.exception(f"Unexpected error generating phone script: {str(e)}")
+        except Exception:
+            logger.exception("Unexpected error generating phone script")
             script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
 
         polly = boto3.client('polly')
@@ -215,28 +212,28 @@ def generate_phone_script():
             VoiceId='Joanna'
         )
 
-        OUTPUT_DIR = Path('/tmp')
-        OUTPUT_DIR.mkdir(exist_ok=True)
+        OUTPUT_DIR = '/tmp'
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-        mp3_path = OUTPUT_DIR / f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3'
+        mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
         with open(mp3_path, 'wb') as file:
             file.write(response['AudioStream'].read())
 
-        wav_path = OUTPUT_DIR / 'leetcode_latest.wav'
+        wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
 
         # Convert mp3 to wav using ffmpeg with compression settings
         subprocess.run([
-            'ffmpeg', '-i', str(mp3_path),
+            'ffmpeg', '-i', mp3_path,
             '-ar', '8000',          # Sample rate: 8kHz 
             '-ac', '1',             # Mono audio
             '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
             '-y',                   # Overwrite output file
-            str(wav_path)
+            wav_path
         ], check=True)
 
         os.remove(mp3_path)
 
-        logger.info("Phone script updated successfully.")
+        MetricsHandler.wav_last_updated.set(int(time.time()))
 
         # Sleep but wake up if phone_script_event is set
         phone_script_event.wait(PHONE_SCRIPT_UPDATE_INTERVAL)

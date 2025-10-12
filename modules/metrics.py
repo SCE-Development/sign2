@@ -48,6 +48,12 @@ class Metrics(enum.Enum):
         prometheus_client.Gauge,
     )
 
+    WAV_LAST_UPDATED = (
+        "wav_last_updated",
+        "Timestamp of when the phone script wav file was last updated",
+        prometheus_client.Gauge,
+    )
+
     def __init__(self, title, description, prometheus_type, label=()):
         self.title = title
         self.description = description
