@@ -28,7 +28,9 @@ def maybe_create_table(sqlite_file: str) -> bool:
                     CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_slug TEXT NOT NULL UNIQUE,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        first_name TEXT,
+                        last_name TEXT
                     );
                 """
             )

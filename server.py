@@ -4,9 +4,12 @@ import sys
 import uvicorn
 import threading
 import zoneinfo
-import time
+import subprocess
+import boto3
+import os
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 import yaml
 import prometheus_client
 
@@ -22,6 +25,8 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
+phone_script_event = threading.Event()
+phone_script_lock = threading.Lock()
 
 app = FastAPI()
 arguments = args.get_args()
@@ -35,6 +40,7 @@ with open(arguments.config, "r") as stream:
         SQLITE_FILE_NAME = data.get("sqlite3_file_name", "users.db")
         TIME_ZONE = data.get("local_timezone", "UTC")
         POINTS = data.get("points", {})
+        LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS = data.get("leaderboard_wav_file_update_interval_seconds", 1800)
     except Exception:
         logger.exception("unable to open yaml file / file is missing data, exiting")
         sys.exit(1)
@@ -42,10 +48,10 @@ with open(arguments.config, "r") as stream:
 metrics_handler = MetricsHandler.instance()
 
 @app.get("/")
-async def get_leaderboard():
+def get_leaderboard():
     try:
-        leaderboard_data = await leaderboard()
-        MetricsHandler.sign_last_updated.set(int(time.time()))
+        leaderboard_data = leaderboard()
+        MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
     except Exception as e:
@@ -111,6 +117,14 @@ def debug():
     return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
 
 
+@app.get("/phone")
+async def get_phone_script():
+    wav_path = os.path.join('/tmp', 'leetcode_latest.wav')
+    if not os.path.exists(wav_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
+
+
 @app.middleware("http")
 async def track_response_codes(request: Request, call_next):
     response = await call_next(request)
@@ -126,7 +140,7 @@ def get_metrics():
     )
 
 
-async def leaderboard():
+def leaderboard():
     tz = zoneinfo.ZoneInfo(TIME_ZONE)
     now_local = datetime.datetime.now(tz)
 
@@ -175,13 +189,64 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
+def generate_phone_script():
+    while not phone_script_event.is_set():
+        try:
+            leaderboard_data = leaderboard()
+            script = "The LeetCode Leaderboard is as follows:"
+            for i, entry in enumerate(leaderboard_data):
+                if i > 9:
+                    break
+                points = entry['points']
+                script += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
+            
+        except Exception:
+            logger.exception("Unexpected error generating phone script")
+            script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
+
+        polly = boto3.client('polly')
+        response = polly.synthesize_speech(
+            Text=script,
+            OutputFormat='mp3',
+            VoiceId='Joanna'
+        )
+
+        OUTPUT_DIR = '/tmp'
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+        mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
+        with open(mp3_path, 'wb') as file:
+            file.write(response['AudioStream'].read())
+
+        wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
+
+        # Convert mp3 to wav using ffmpeg with compression settings
+        subprocess.run([
+            'ffmpeg', '-i', mp3_path,
+            '-ar', '8000',          # Sample rate: 8kHz 
+            '-ac', '1',             # Mono audio
+            '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
+            '-y',                   # Overwrite output file
+            wav_path
+        ], check=True)
+
+        os.remove(mp3_path)
+
+        MetricsHandler.wav_last_updated.set(datetime.datetime.now().timestamp())
+
+        # Sleep but wake up if phone_script_event is set
+        phone_script_event.wait(LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS)
+
+
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
+    phone_script_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
+    threading.Thread(target=generate_phone_script).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
