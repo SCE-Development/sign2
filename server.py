@@ -5,7 +5,7 @@ import uvicorn
 import threading
 import zoneinfo
 import subprocess
-import boto3
+from gtts import gTTS
 import os
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -204,19 +204,14 @@ def generate_phone_script():
             logger.exception("Unexpected error generating phone script")
             script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
 
-        polly = boto3.client('polly')
-        response = polly.synthesize_speech(
-            Text=script,
-            OutputFormat='mp3',
-            VoiceId='Joanna'
-        )
+        tts = gTTS(text=script, lang='en', slow=False)
 
         OUTPUT_DIR = '/tmp'
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
         mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
-        with open(mp3_path, 'wb') as file:
-            file.write(response['AudioStream'].read())
+
+        tts.save(mp3_path)
 
         wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
 
