@@ -27,6 +27,8 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 leetcode_stop_event = threading.Event()
 phone_script_event = threading.Event()
 phone_script_lock = threading.Lock()
+wav_generation_lock = threading.Lock()
+last_wav_generation_time = None
 
 app = FastAPI()
 arguments = args.get_args()
@@ -53,7 +55,10 @@ def get_leaderboard():
         leaderboard_data = leaderboard()
         MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
         MetricsHandler.sign_update_error.set(0)
-        return leaderboard_data
+        return {
+            "month": datetime.datetime.now().month - 1,
+            "leaderboard": leaderboard_data
+        }
     except Exception as e:
         MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
@@ -119,10 +124,24 @@ def debug():
 
 @app.get("/phone")
 async def get_phone_script():
+    global last_wav_generation_time
+    
     wav_path = os.path.join('/tmp', 'leetcode_latest.wav')
-    if not os.path.exists(wav_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
-    return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
+    current_time = datetime.datetime.now().timestamp()
+
+    if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
+        return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
+
+    with wav_generation_lock:
+        if last_wav_generation_time is None or current_time - last_wav_generation_time > 1800:
+            logger.info("Regenerating phone script audio file on demand")
+            generate_wav_file() 
+    
+    month = datetime.datetime.now().month - 1
+    return {
+        "file": FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav'),
+        "month": month
+    }
 
 
 @app.middleware("http")
@@ -189,46 +208,59 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
+def generate_wav_file():
+    """Generate the phone script WAV file from the current leaderboard data."""
+    global last_wav_generation_time
+    
+    try:
+        leaderboard_data = leaderboard()
+        leaderboard = leaderboard_data['leaderboard']
+        script = "The LeetCode Leaderboard is as follows:"
+        for i, entry in enumerate(leaderboard):
+            if i > 9:
+                break
+            points = entry['points']
+            script += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
+        
+    except Exception:
+        logger.exception("Unexpected error generating phone script")
+        script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
+
+    tts = gTTS(text=script, lang='en', slow=False)
+
+    OUTPUT_DIR = '/tmp'
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
+
+    tts.save(mp3_path)
+
+    wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
+
+    # Convert mp3 to wav using ffmpeg with compression settings
+    subprocess.run([
+        'ffmpeg', '-i', mp3_path,
+        '-ar', '8000',          # Sample rate: 8kHz 
+        '-ac', '1',             # Mono audio
+        '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
+        '-y',                   # Overwrite output file
+        wav_path
+    ], check=True)
+
+    os.remove(mp3_path)
+
+    # Update the timestamp
+    last_wav_generation_time = datetime.datetime.now().timestamp()
+    MetricsHandler.wav_last_updated.set(last_wav_generation_time)
+    logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
+
+
 def generate_phone_script():
+    """Background thread that periodically regenerates the phone script WAV file."""
     while not phone_script_event.is_set():
-        try:
-            leaderboard_data = leaderboard()
-            script = "The LeetCode Leaderboard is as follows:"
-            for i, entry in enumerate(leaderboard_data):
-                if i > 9:
-                    break
-                points = entry['points']
-                script += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
-            
-        except Exception:
-            logger.exception("Unexpected error generating phone script")
-            script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
-
-        tts = gTTS(text=script, lang='en', slow=False)
-
-        OUTPUT_DIR = '/tmp'
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-        mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
-
-        tts.save(mp3_path)
-
-        wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
-
-        # Convert mp3 to wav using ffmpeg with compression settings
-        subprocess.run([
-            'ffmpeg', '-i', mp3_path,
-            '-ar', '8000',          # Sample rate: 8kHz 
-            '-ac', '1',             # Mono audio
-            '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
-            '-y',                   # Overwrite output file
-            wav_path
-        ], check=True)
-
-        os.remove(mp3_path)
-
-        MetricsHandler.wav_last_updated.set(datetime.datetime.now().timestamp())
-
+        with wav_generation_lock:
+            generate_wav_file()
+        
         # Sleep but wake up if phone_script_event is set
         phone_script_event.wait(LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS)
 
