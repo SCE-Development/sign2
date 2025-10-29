@@ -134,6 +134,7 @@ async def get_phone_script():
             logger.info("Regenerating phone script audio file on demand")
             generate_wav_file() 
     
+    MetricsHandler.wav_last_sent.set(datetime.datetime.now().timestamp())
     return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
 
