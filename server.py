@@ -26,7 +26,6 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
-phone_script_event = threading.Event()
 phone_script_lock = threading.Lock()
 wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
@@ -250,25 +249,13 @@ def generate_wav_file():
     logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
 
 
-def generate_phone_script():
-    """Background thread that periodically regenerates the phone script WAV file."""
-    while not phone_script_event.is_set():
-        with wav_generation_lock:
-            generate_wav_file()
-        
-        # Sleep but wake up if phone_script_event is set
-        phone_script_event.wait(LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS)
-
-
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
-    phone_script_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
-    threading.Thread(target=generate_phone_script).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
