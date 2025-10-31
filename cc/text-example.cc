@@ -56,7 +56,7 @@ void DisplayLeaderboard(RGBMatrix * canvas,
     const std::string & leaderboard_data) {
   json response;
   json leaderboard;
-  int month;
+  int month = -1; // Initialize to -1 to indicate not set
   try {
     response = json::parse(leaderboard_data);
     if (response.contains("leaderboard") && response["leaderboard"].is_array()) {
@@ -136,18 +136,17 @@ void DisplayLeaderboard(RGBMatrix * canvas,
     }
   }
   
-  // Map month number (0-11) to month name
-  const char* month_names[] = {
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  };
-  
-  std::string month_name = "Unknown";
+  // Only display month if it was successfully retrieved from JSON
   if (month >= 0 && month <= 11) {
-    month_name = month_names[month];
+    // Map month number (0-11) to month name
+    const char* month_names[] = {
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    };
+    
+    std::string month_name = month_names[month];
+    DrawText(canvas, font, x, y, text_color, nullptr, "Month: " + month_name, 0);
   }
-  
-  DrawText(canvas, font, x, y, text_color, nullptr, "Month: " + month_name, 0);
 }
 
 int main(int argc, char * argv[]) {
