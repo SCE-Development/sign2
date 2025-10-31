@@ -54,7 +54,7 @@ metrics_handler = MetricsHandler.instance()
 def get_leaderboard():
     try:
         leaderboard_data = leaderboard()
-        MetricsHandler.sign_last_updated.inc()
+        MetricsHandler.sign_last_updated.set(time.time())
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
     except Exception as e:
@@ -128,9 +128,7 @@ async def get_phone_script():
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
-        epoch_time_float = time.time()
-        epoch_time_seconds = int(epoch_time_float)
-        MetricsHandler.wav_last_sent.set(epoch_time_seconds)
+        MetricsHandler.wav_last_sent.set(time.time())
         return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
     with wav_generation_lock:
