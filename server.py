@@ -53,7 +53,7 @@ metrics_handler = MetricsHandler.instance()
 def get_leaderboard():
     try:
         leaderboard_data = leaderboard()
-        MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
+        MetricsHandler.sign_last_updated.inc()
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
     except Exception as e:
@@ -127,14 +127,15 @@ async def get_phone_script():
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
+        MetricsHandler.wav_last_sent.inc()
         return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
     with wav_generation_lock:
         if last_wav_generation_time is None or current_time - last_wav_generation_time > 1800:
             logger.info("Regenerating phone script audio file on demand")
             generate_wav_file() 
-    
-    MetricsHandler.wav_last_sent.set(datetime.datetime.now().timestamp())
+
+    MetricsHandler.wav_last_sent.inc()
     return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
 
@@ -244,7 +245,7 @@ def generate_wav_file():
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
-    MetricsHandler.wav_last_updated.set(last_wav_generation_time)
+    MetricsHandler.wav_last_updated.inc()
     logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
 
 
