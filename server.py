@@ -7,6 +7,7 @@ import zoneinfo
 import subprocess
 from gtts import gTTS
 import os
+import time
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -25,7 +26,6 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
-phone_script_event = threading.Event()
 phone_script_lock = threading.Lock()
 wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
@@ -53,7 +53,7 @@ metrics_handler = MetricsHandler.instance()
 def get_leaderboard():
     try:
         leaderboard_data = leaderboard()
-        MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
+        MetricsHandler.sign_last_updated.set(time.time())
         MetricsHandler.sign_update_error.set(0)
         return leaderboard_data
     except Exception as e:
@@ -127,13 +127,15 @@ async def get_phone_script():
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
+        MetricsHandler.wav_last_sent.set(time.time())
         return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
     with wav_generation_lock:
         if last_wav_generation_time is None or current_time - last_wav_generation_time > 1800:
             logger.info("Regenerating phone script audio file on demand")
             generate_wav_file() 
-    
+
+    MetricsHandler.wav_last_sent.set(time.time())
     return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
 
@@ -243,29 +245,17 @@ def generate_wav_file():
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
-    MetricsHandler.wav_last_updated.set(last_wav_generation_time)
+    MetricsHandler.wav_last_generated.set(last_wav_generation_time)
     logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
-
-
-def generate_phone_script():
-    """Background thread that periodically regenerates the phone script WAV file."""
-    while not phone_script_event.is_set():
-        with wav_generation_lock:
-            generate_wav_file()
-        
-        # Sleep but wake up if phone_script_event is set
-        phone_script_event.wait(LEADERBOARD_WAV_FILE_UPDATE_INTERVAL_SECONDS)
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("you should stop the leetcode thread NOW")
     leetcode_stop_event.set()
-    phone_script_event.set()
 
 if __name__ == "server":
     threading.Thread(target=poll_leetcode).start()
-    threading.Thread(target=generate_phone_script).start()
 
 if __name__ == "__main__":
     sqlite_helpers.maybe_create_table(SQLITE_FILE_NAME)
