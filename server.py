@@ -153,6 +153,7 @@ def get_metrics():
 
 
 def leaderboard():
+    """Fetch the leaderboard data from the SQLite database."""
     tz = zoneinfo.ZoneInfo(TIME_ZONE)
     now_local = datetime.datetime.now(tz)
 
@@ -209,10 +210,10 @@ def generate_wav_file():
     global last_wav_generation_time
     
     try:
-        leaderboard_data = leaderboard()
-        leaderboard = leaderboard_data['leaderboard']
+        fetch_leaderboard = leaderboard()
+        leaderboard_data = fetch_leaderboard['leaderboard']
         script = "The LeetCode Leaderboard is as follows:"
-        for i, entry in enumerate(leaderboard):
+        for i, entry in enumerate(leaderboard_data):
             if i > 9:
                 break
             points = entry['points']

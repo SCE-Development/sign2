@@ -63,13 +63,14 @@ class LeaderboardDisplay(SampleBase):
 
     def get_sample_data(self):
         """Fallback data if API fails."""
-        return [
+        leaderboard =  [
             {"username": "User1", "points": 100},
             {"username": "User2", "points": 80},
             {"username": "User3", "points": 60},
             {"username": "User4", "points": 40},
             {"username": "User5", "points": 20}
         ]
+        return {"leaderboard": leaderboard, "month": -1}
 
     def run(self):
         offset_canvas = self.matrix.CreateFrameCanvas()
@@ -137,7 +138,7 @@ class LeaderboardDisplay(SampleBase):
                         graphics.DrawText(
                             offset_canvas, font,
                             self.LEFT_MARGIN, y_pos,
-                            white, f"Month: {months_mapping[month]}"
+                            yellow, f"    Month: {months_mapping[month]}"
                         )
 
                 except Exception as e:
