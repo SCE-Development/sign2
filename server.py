@@ -7,6 +7,7 @@ import zoneinfo
 import subprocess
 from gtts import gTTS
 import os
+import time
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -127,7 +128,9 @@ async def get_phone_script():
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
-        MetricsHandler.wav_last_sent.inc()
+        epoch_time_float = time.time()
+        epoch_time_seconds = int(epoch_time_float)
+        MetricsHandler.wav_last_sent.set(epoch_time_seconds)
         return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
     with wav_generation_lock:
@@ -245,7 +248,7 @@ def generate_wav_file():
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
-    MetricsHandler.wav_last_updated.inc()
+    MetricsHandler.wav_last_updated.set(last_wav_generation_time)
     logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
 
 
