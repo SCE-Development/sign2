@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <array>
 
 //URL is hardcoded for fetching leaderboard data
 
@@ -139,7 +140,7 @@ void DisplayLeaderboard(RGBMatrix * canvas,
   // Only display month if it was successfully retrieved from JSON
   if (month >= 0 && month <= 11) {
     // Map month number (0-11) to month name
-    const char* month_names[] = {
+    constexpr std::array<const char*, 12> month_names = {
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     };
