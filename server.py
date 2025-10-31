@@ -55,10 +55,7 @@ def get_leaderboard():
         leaderboard_data = leaderboard()
         MetricsHandler.sign_last_updated.set(datetime.datetime.now().timestamp())
         MetricsHandler.sign_update_error.set(0)
-        return {
-            "month": datetime.datetime.now().month - 1,
-            "leaderboard": leaderboard_data
-        }
+        return leaderboard_data
     except Exception as e:
         MetricsHandler.sign_update_error.set(1)
         logger.exception(f"Error fetching leaderboard: {str(e)}")
@@ -137,11 +134,7 @@ async def get_phone_script():
             logger.info("Regenerating phone script audio file on demand")
             generate_wav_file() 
     
-    month = datetime.datetime.now().month - 1
-    return {
-        "file": FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav'),
-        "month": month
-    }
+    return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
 
 
 @app.middleware("http")
@@ -182,7 +175,10 @@ def leaderboard():
             + user["hard"] * POINTS.get("hard", 5)
         )
     leaderboard_data = sorted(users, key=lambda u: u["points"], reverse=True)
-    return leaderboard_data
+    return {
+        "leaderboard": leaderboard_data,
+        "month": now_local.month - 1
+    }
 
 
 def poll_leetcode():
