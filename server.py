@@ -26,7 +26,6 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 
 leetcode_stop_event = threading.Event()
-phone_script_lock = threading.Lock()
 wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
 
@@ -259,6 +258,10 @@ def shutdown_event():
     leetcode_stop_event.set()
 
 if __name__ == "server":
+    # Initialize metrics on container startup
+    MetricsHandler.wav_last_generated.set(time.time())
+    MetricsHandler.wav_last_sent.set(time.time())
+    MetricsHandler.sign_last_updated.set(time.time())
     threading.Thread(target=poll_leetcode).start()
 
 if __name__ == "__main__":
