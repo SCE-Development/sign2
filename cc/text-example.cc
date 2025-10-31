@@ -60,13 +60,13 @@ void DisplayLeaderboard(RGBMatrix * canvas,
   int month = -1; // Initialize to -1 to indicate not set
   try {
     response = json::parse(leaderboard_data);
-    if (response.contains("leaderboard") && response["leaderboard"].is_array()) {
+    if (response.contains("leaderboard")) {
       leaderboard = response["leaderboard"];
     } else {
       fprintf(stderr, "JSON does not contain 'leaderboard' array\n");
       return;
     }
-    if (response.contains("month") && response["month"].is_int()) {
+    if (response.contains("month")) {
       month = response["month"];
     }
   } catch (...) {
@@ -146,8 +146,8 @@ void DisplayLeaderboard(RGBMatrix * canvas,
     };
 
     text_color = Color(255, 191, 0);
-    std::string month_name = month_names[month];
-    DrawText(canvas, font, x, y, text_color, nullptr, "    Month: " + month_name, 0);
+    std::string month_text = "    Month: " + std::string(month_names[month]);
+    DrawText(canvas, font, x, y, text_color, nullptr, month_text.c_str(), 0);
   }
 }
 
