@@ -146,7 +146,7 @@ void DisplayLeaderboard(RGBMatrix * canvas,
     };
 
     text_color = Color(255, 191, 0);
-    std::string month_text = "    Month: " + std::string(month_names[month]);
+    std::string month_text = "     Month: " + std::string(month_names[month]);
     DrawText(canvas, font, x, y, text_color, nullptr, month_text.c_str(), 0);
   }
 }
