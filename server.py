@@ -155,6 +155,7 @@ def get_metrics():
 
 
 def leaderboard():
+    """Fetch the leaderboard data from the SQLite database."""
     tz = zoneinfo.ZoneInfo(TIME_ZONE)
     now_local = datetime.datetime.now(tz)
 
@@ -177,7 +178,10 @@ def leaderboard():
             + user["hard"] * POINTS.get("hard", 5)
         )
     leaderboard_data = sorted(users, key=lambda u: u["points"], reverse=True)
-    return leaderboard_data
+    return {
+        "leaderboard": leaderboard_data,
+        "month": now_local.month - 1
+    }
 
 
 def poll_leetcode():
@@ -208,7 +212,8 @@ def generate_wav_file():
     global last_wav_generation_time
     
     try:
-        leaderboard_data = leaderboard()
+        fetch_leaderboard = leaderboard()
+        leaderboard_data = fetch_leaderboard['leaderboard']
         script = "The LeetCode Leaderboard is as follows:"
         for i, entry in enumerate(leaderboard_data):
             if i > 9:

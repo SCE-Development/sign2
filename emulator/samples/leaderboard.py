@@ -8,6 +8,21 @@ import os
 from RGBMatrixEmulator import graphics
 MAIN_URL='http://backend:8000/'
 
+months_mapping = {
+    0: "January",
+    1: "February",
+    2: "March",
+    3: "April",
+    4: "May",
+    5: "June",
+    6: "July",
+    7: "August",
+    8: "September",
+    9: "October",
+    10: "November",
+    11: "December"
+}
+
 class LeaderboardDisplay(SampleBase):
     def __init__(self, *args, **kwargs):
         super(LeaderboardDisplay, self).__init__(*args, **kwargs)
@@ -31,28 +46,31 @@ class LeaderboardDisplay(SampleBase):
         try:
             response = requests.get(MAIN_URL)
             data = response.json()  # Expecting a list of dicts
-            print(data)
+            leaderboard = data.get("leaderboard", [])
+            month = data.get("month", -1)
             # Extract just username + points for each entry
-            return [
+            leaderboard = [
                 {
                     "username": entry.get("username", "unknown"),
                     "points": entry.get("points", 0)
                 }
-                for entry in data
+                for entry in leaderboard
             ]
+            return {"leaderboard": leaderboard, "month": month}
         except Exception as e:
             print(f"Error fetching leaderboard: {e}")
             return self.get_sample_data()
 
     def get_sample_data(self):
         """Fallback data if API fails."""
-        return [
+        leaderboard =  [
             {"username": "User1", "points": 100},
             {"username": "User2", "points": 80},
             {"username": "User3", "points": 60},
             {"username": "User4", "points": 40},
             {"username": "User5", "points": 20}
         ]
+        return {"leaderboard": leaderboard, "month": -1}
 
     def run(self):
         offset_canvas = self.matrix.CreateFrameCanvas()
@@ -86,7 +104,9 @@ class LeaderboardDisplay(SampleBase):
                 y_pos = self.ENTRIES_START_Y
                 try:
                     leaderboard_data = self.fetch_leaderboard()
-                    for i, entry in enumerate(leaderboard_data, start=1):
+                    leaderboard = leaderboard_data['leaderboard']
+                    month = leaderboard_data['month']
+                    for i, entry in enumerate(leaderboard, start=1):
                         if i > self.MAX_ENTRIES:
                             break
 
@@ -113,6 +133,13 @@ class LeaderboardDisplay(SampleBase):
                             color, text
                         )
                         y_pos += self.ENTRY_SPACING
+
+                    if month in months_mapping:
+                        graphics.DrawText(
+                            offset_canvas, font,
+                            self.LEFT_MARGIN, y_pos,
+                            yellow, f"    Month: {months_mapping[month]}"
+                        )
 
                 except Exception as e:
                     print(f"Error processing leaderboard: {e}")
