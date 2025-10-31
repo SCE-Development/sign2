@@ -246,7 +246,7 @@ def generate_wav_file():
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
-    MetricsHandler.wav_last_updated.set(last_wav_generation_time)
+    MetricsHandler.wav_last_generated.set(last_wav_generation_time)
     logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
 
 

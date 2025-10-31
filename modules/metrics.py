@@ -48,9 +48,9 @@ class Metrics(enum.Enum):
         prometheus_client.Gauge,
     )
 
-    WAV_LAST_UPDATED = (
-        "wav_last_updated",
-        "Timestamp of when the phone script wav file was last updated",
+    WAV_LAST_GENERATED = (
+        "wav_last_generated",
+        "Timestamp of when the phone script wav file was last generated",
         prometheus_client.Gauge,
     )
 
