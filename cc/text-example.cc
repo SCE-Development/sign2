@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <array>
 
 //URL is hardcoded for fetching leaderboard data
 
@@ -54,10 +55,20 @@ std::string FetchLeaderboard(const std::string & url) {
 void DisplayLeaderboard(RGBMatrix * canvas,
   const rgb_matrix::Font & font,
     const std::string & leaderboard_data) {
-  // Parse leaderboard JSON (an array of objects)
+  json response;
   json leaderboard;
+  int month = -1; // Initialize to -1 to indicate not set
   try {
-    leaderboard = json::parse(leaderboard_data);
+    response = json::parse(leaderboard_data);
+    if (response.contains("leaderboard") && response["leaderboard"].is_array()) {
+      leaderboard = response["leaderboard"];
+    } else {
+      fprintf(stderr, "JSON does not contain 'leaderboard' array\n");
+      return;
+    }
+    if (response.contains("month") && response["month"].is_int()) {
+      month = response["month"];
+    }
   } catch (...) {
     fprintf(stderr, "Error parsing JSON data\n");
     return;
@@ -124,6 +135,18 @@ void DisplayLeaderboard(RGBMatrix * canvas,
       // If you only want top 5, break now
       break;
     }
+  }
+  
+  // Only display month if it was successfully retrieved from JSON
+  if (month >= 0 && month <= 11) {
+    // Map month number (0-11) to month name
+    constexpr std::array<const char*, 12> month_names = {
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    };
+    
+    std::string month_name = month_names[month];
+    DrawText(canvas, font, x, y, text_color, nullptr, "Month: " + month_name, 0);
   }
 }
 
