@@ -54,10 +54,20 @@ std::string FetchLeaderboard(const std::string & url) {
 void DisplayLeaderboard(RGBMatrix * canvas,
   const rgb_matrix::Font & font,
     const std::string & leaderboard_data) {
-  // Parse leaderboard JSON (an array of objects)
+  json response;
   json leaderboard;
+  int month;
   try {
-    leaderboard = json::parse(leaderboard_data);
+    response = json::parse(leaderboard_data);
+    if (response.contains("leaderboard") && response["leaderboard"].is_array()) {
+      leaderboard = response["leaderboard"];
+    } else {
+      fprintf(stderr, "JSON does not contain 'leaderboard' array\n");
+      return;
+    }
+    if (response.contains("month") && response["month"].is_int()) {
+      month = response["month"];
+    }
   } catch (...) {
     fprintf(stderr, "Error parsing JSON data\n");
     return;
@@ -125,6 +135,19 @@ void DisplayLeaderboard(RGBMatrix * canvas,
       break;
     }
   }
+  
+  // Map month number (0-11) to month name
+  const char* month_names[] = {
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  };
+  
+  std::string month_name = "Unknown";
+  if (month >= 0 && month <= 11) {
+    month_name = month_names[month];
+  }
+  
+  DrawText(canvas, font, x, y, text_color, nullptr, "Month: " + month_name, 0);
 }
 
 int main(int argc, char * argv[]) {
