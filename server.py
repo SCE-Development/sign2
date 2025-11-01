@@ -260,8 +260,10 @@ def my_big_dumb_generation_life():
         
     except Exception:
         logger.exception("Unexpected error generating phone script")
+        MetricsHandler.wav_generation_error.set(1)
         return
 
+    MetricsHandler.wav_generation_error.set(0)
     OUTPUT_DIR = '/app/tmp'
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
