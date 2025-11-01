@@ -30,6 +30,22 @@ leetcode_stop_event = threading.Event()
 wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
 
+
+OUTPUT_DIR = '/app/tmp'
+FULL_ORDER = [
+    os.path.join(OUTPUT_DIR, 'as_of.mp3'),
+    os.path.join(OUTPUT_DIR, 'time.mp3'),
+    os.path.join(OUTPUT_DIR, 'our_lc_leaderboard.mp3'),
+    os.path.join(OUTPUT_DIR, 'num_participants.mp3'),
+    os.path.join(OUTPUT_DIR, 'top_10_for_month.mp3'),
+    os.path.join(OUTPUT_DIR, 'month.mp3'),
+    os.path.join(OUTPUT_DIR, 'is_as_follows.mp3'),
+    os.path.join(OUTPUT_DIR, 'top_10.mp3'),
+    os.path.join(OUTPUT_DIR, 'visit_our_website.mp3')
+]
+EXPECTED_BEN_FILES = ['as_of.mp3', 'our_lc_leaderboard.mp3', 'top_10_for_month.mp3', 'is_as_follows.mp3', 'visit_our_website.mp3']
+
+
 app = FastAPI()
 arguments = args.get_args()
 
@@ -217,8 +233,6 @@ def create_asterisk_encoded_wav(mp3_path, wav_path):
         '-y',                   # Overwrite output file
         wav_path
     ], check=True, stdout=subprocess.DEVNULL)
-    
-    os.remove(mp3_path)
 
 
 def generate_ai_audio(output_dir, time_str, num_participants, month, top_10):
@@ -232,6 +246,8 @@ def generate_ai_audio(output_dir, time_str, num_participants, month, top_10):
     
     wav_path = os.path.join(output_dir, 'leetcode_latest.wav')
     create_asterisk_encoded_wav(mp3_path, wav_path)
+
+    os.remove(mp3_path)
 
     last_wav_generation_time = datetime.datetime.now().timestamp()
     MetricsHandler.wav_last_generated.set(last_wav_generation_time)
@@ -264,37 +280,29 @@ def my_big_dumb_generation_life():
         return
 
     MetricsHandler.wav_generation_error.set(0)
-    OUTPUT_DIR = '/app/tmp'
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    ben = ['as_of.mp3', 'our_lc_leaderboard.mp3', 'top_10_for_month.mp3', 'is_as_follows.mp3', 'visit_our_website.mp3']
-    not_ben_filenames = ['time', 'num_participants', 'month', 'top_10']
-    not_ben = [time_str, num_participants, month, top_10]
-    full_order = []
-
-    for i, file in enumerate(ben):
+    for i, file in enumerate(EXPECTED_BEN_FILES): # are any ben files missing
         full_path = os.path.join(OUTPUT_DIR, file)
         if not os.path.exists(full_path):
             generate_ai_audio(OUTPUT_DIR, time_str, num_participants, month, top_10)
             return
 
-        full_order.append(full_path)
-        if i == len(not_ben):
-            break
-        mp3 = os.path.join(OUTPUT_DIR, not_ben_filenames[i] + '.mp3')
-        tts = gTTS(text=not_ben[i], lang='en', slow=False)
-        logger.info(f"File {not_ben_filenames[i]} found, using AI voice")
-        tts.save(mp3)
-        full_order.append(mp3)
-        logger.info(f"{full_order}")
+    ai_voice_output_files = ['time', 'num_participants', 'month', 'top_10']
+    ai_voice_input_strings = [time_str, num_participants, month, top_10]
+        
+    for filename, input_string in zip(ai_voice_output_files, ai_voice_input_strings):
+        output_path = os.path.join(OUTPUT_DIR, filename + '.mp3')
+        tts = gTTS(text=input_string, lang='en', slow=False)
+        tts.save(output_path)
 
     # Concatenate all audio files together
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
-        for path in full_order:
+        for path in FULL_ORDER:
             f.write(f"file '{os.path.abspath(path)}'\n")
         list_file = f.name
 
-    mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
+    combined_mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
 
     cmd = [
         "ffmpeg",
@@ -302,19 +310,18 @@ def my_big_dumb_generation_life():
         "-safe", "0",
         "-i", list_file,
         "-c", "copy",
-        mp3_path
+        combined_mp3_path
     ]
 
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
     logger.info('we pieced ben together with the ai')
 
     wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
-    create_asterisk_encoded_wav(mp3_path, wav_path, full_order, ben, OUTPUT_DIR)
-    # Clean up temporary generated files if provided
-    ben_full_paths = [os.path.join(OUTPUT_DIR, f) for f in ben]
-    for file in full_order:
-        if file not in ben_full_paths:
-            os.remove(file)
+    create_asterisk_encoded_wav(combined_mp3_path, wav_path)
+
+    for file in ai_voice_output_files:
+        os.remove(os.path.join(OUTPUT_DIR, file + '.mp3'))
+    os.remove(combined_mp3_path)
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
