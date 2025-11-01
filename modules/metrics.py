@@ -60,6 +60,12 @@ class Metrics(enum.Enum):
         prometheus_client.Gauge,
     )
 
+    WAV_GENERATION_ERROR = (
+        "wav_generation_error",
+        "Gauge of the success of generating the phone script wav file: 0 for success and 1 for failure",
+        prometheus_client.Gauge,
+    )
+
     def __init__(self, title, description, prometheus_type, label=()):
         self.title = title
         self.description = description
