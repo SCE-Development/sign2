@@ -8,6 +8,7 @@ import subprocess
 from gtts import gTTS
 import os
 import time
+import tempfile
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -28,6 +29,22 @@ logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 leetcode_stop_event = threading.Event()
 wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
+
+
+OUTPUT_DIR = '/app/phone'
+FULL_ORDER = [
+    os.path.join(OUTPUT_DIR, 'as_of.mp3'),
+    os.path.join(OUTPUT_DIR, 'time.mp3'),
+    os.path.join(OUTPUT_DIR, 'our_lc_leaderboard.mp3'),
+    os.path.join(OUTPUT_DIR, 'num_participants.mp3'),
+    os.path.join(OUTPUT_DIR, 'top_10_for_month.mp3'),
+    os.path.join(OUTPUT_DIR, 'month.mp3'),
+    os.path.join(OUTPUT_DIR, 'is_as_follows.mp3'),
+    os.path.join(OUTPUT_DIR, 'top_10.mp3'),
+    os.path.join(OUTPUT_DIR, 'visit_our_website.mp3')
+]
+EXPECTED_BEN_FILES = ['as_of.mp3', 'our_lc_leaderboard.mp3', 'top_10_for_month.mp3', 'is_as_follows.mp3', 'visit_our_website.mp3']
+
 
 app = FastAPI()
 arguments = args.get_args()
@@ -121,7 +138,7 @@ def debug():
 async def get_phone_script():
     global last_wav_generation_time
     
-    wav_path = os.path.join('/tmp', 'leetcode_latest.wav')
+    wav_path = os.path.join('/app/phone', 'leetcode_latest.wav')
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
@@ -131,7 +148,7 @@ async def get_phone_script():
     with wav_generation_lock:
         if last_wav_generation_time is None or current_time - last_wav_generation_time > 1800:
             logger.info("Regenerating phone script audio file on demand")
-            generate_wav_file() 
+            my_big_dumb_generation_life() 
 
     MetricsHandler.wav_last_sent.set(time.time())
     return FileResponse(wav_path, media_type="audio/wav", filename='leetcode_latest.wav')
@@ -205,35 +222,8 @@ def poll_leetcode():
         leetcode_stop_event.wait(POLLING_INTERVAL)
 
 
-def generate_wav_file():
-    """Generate the phone script WAV file from the current leaderboard data."""
-    global last_wav_generation_time
-    
-    try:
-        fetch_leaderboard = leaderboard()
-        leaderboard_data = fetch_leaderboard['leaderboard']
-        script = "The LeetCode Leaderboard is as follows:"
-        for i, entry in enumerate(leaderboard_data):
-            if i > 9:
-                break
-            points = entry['points']
-            script += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
-        
-    except Exception:
-        logger.exception("Unexpected error generating phone script")
-        script = "I'm sorry, I am unable to retrieve the LeetCode leaderboard at this time. Please try again shortly."
-
-    tts = gTTS(text=script, lang='en', slow=False)
-
-    OUTPUT_DIR = '/tmp'
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
-
-    tts.save(mp3_path)
-
-    wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
-
+def create_asterisk_encoded_wav(mp3_path, wav_path):
+    """Convert mp3 file to wav format with compression settings and cleanup."""
     # Convert mp3 to wav using ffmpeg with compression settings
     subprocess.run([
         'ffmpeg', '-i', mp3_path,
@@ -242,9 +232,96 @@ def generate_wav_file():
         '-acodec', 'pcm_s16le', # PCM 16-bit little-endian codec
         '-y',                   # Overwrite output file
         wav_path
-    ], check=True)
+    ], check=True, stdout=subprocess.DEVNULL)
+
+
+def generate_ai_audio(output_dir, time_str, num_participants, month, top_10):
+    """Generate a simple AI-only audio file when pre-recorded files are missing."""
+    global last_wav_generation_time
+    logger.info("Defaulting to AI voice for entire script")
+    script = f"As of {time_str}, our LeetCode Leaderboard has {num_participants} participants. The top 10 for the month of {month} is as follows: {top_10}. If you wish to participate in the leaderboard, please visit sce dot sjsu dot edu"
+    mp3_path = os.path.join(output_dir, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
+    tts = gTTS(text=script, lang='en', slow=False)
+    tts.save(mp3_path)
+    
+    wav_path = os.path.join(output_dir, 'leetcode_latest.wav')
+    create_asterisk_encoded_wav(mp3_path, wav_path)
 
     os.remove(mp3_path)
+
+    last_wav_generation_time = datetime.datetime.now().timestamp()
+    MetricsHandler.wav_last_generated.set(last_wav_generation_time)
+    logger.info(f"Phone script WAV file generated successfully at {datetime.datetime.fromtimestamp(last_wav_generation_time)}")
+
+
+def my_big_dumb_generation_life():
+    """Generate the phone script WAV file from the current leaderboard data."""
+    global last_wav_generation_time
+
+    try:
+        fetch_leaderboard = leaderboard()
+        leaderboard_data = fetch_leaderboard['leaderboard']
+        num_participants = str(len(leaderboard_data))
+        tz = zoneinfo.ZoneInfo("America/Los_Angeles")
+        now_local = datetime.datetime.now(tz)
+        month = now_local.strftime("%B")
+        now = datetime.datetime.now(tz)
+        time_str = now.strftime("%I:%M %p %Z").lstrip("0")
+        top_10 = ""    
+        for i, entry in enumerate(leaderboard_data):
+            if i > 9:
+                break
+            points = entry['points']
+            top_10 += f"\n{entry['username']} has {points} {'point' if points == 1 else 'points'}."
+        
+    except Exception:
+        logger.exception("Unexpected error generating phone script")
+        MetricsHandler.wav_generation_error.set(1)
+        return
+
+    MetricsHandler.wav_generation_error.set(0)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    for i, file in enumerate(EXPECTED_BEN_FILES): # are any ben files missing
+        full_path = os.path.join(OUTPUT_DIR, file)
+        if not os.path.exists(full_path):
+            generate_ai_audio(OUTPUT_DIR, time_str, num_participants, month, top_10)
+            return
+
+    ai_voice_output_files = ['time', 'num_participants', 'month', 'top_10']
+    ai_voice_input_strings = [time_str, num_participants, month, top_10]
+        
+    for filename, input_string in zip(ai_voice_output_files, ai_voice_input_strings):
+        output_path = os.path.join(OUTPUT_DIR, filename + '.mp3')
+        tts = gTTS(text=input_string, lang='en', slow=False)
+        tts.save(output_path)
+
+    # Concatenate all audio files together
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+        for path in FULL_ORDER:
+            f.write(f"file '{os.path.abspath(path)}'\n")
+        list_file = f.name
+
+    combined_mp3_path = os.path.join(OUTPUT_DIR, f'{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.mp3')
+
+    cmd = [
+        "ffmpeg",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", list_file,
+        "-c", "copy",
+        combined_mp3_path
+    ]
+
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+    logger.info('we pieced ben together with the ai')
+
+    wav_path = os.path.join(OUTPUT_DIR, 'leetcode_latest.wav')
+    create_asterisk_encoded_wav(combined_mp3_path, wav_path)
+
+    for file in ai_voice_output_files:
+        os.remove(os.path.join(OUTPUT_DIR, file + '.mp3'))
+    os.remove(combined_mp3_path)
 
     # Update the timestamp
     last_wav_generation_time = datetime.datetime.now().timestamp()
