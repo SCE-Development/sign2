@@ -19,3 +19,6 @@ tmp
 .env
 *.wav
 *.mp3
+
+phone/
+!phone/keep

@@ -31,7 +31,7 @@ wav_generation_lock = threading.Lock()
 last_wav_generation_time = None
 
 
-OUTPUT_DIR = '/app/tmp'
+OUTPUT_DIR = '/app/phone'
 FULL_ORDER = [
     os.path.join(OUTPUT_DIR, 'as_of.mp3'),
     os.path.join(OUTPUT_DIR, 'time.mp3'),
@@ -138,7 +138,7 @@ def debug():
 async def get_phone_script():
     global last_wav_generation_time
     
-    wav_path = os.path.join('/app/tmp', 'leetcode_latest.wav')
+    wav_path = os.path.join('/app/phone', 'leetcode_latest.wav')
     current_time = datetime.datetime.now().timestamp()
 
     if os.path.exists(wav_path) and last_wav_generation_time is not None and current_time - last_wav_generation_time < 1800:
