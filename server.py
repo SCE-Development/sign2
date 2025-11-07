@@ -130,8 +130,7 @@ def debug():
     # dump all contents of the tables sorted by created_at for both tables
     leetcode_snapshots = sqlite_helpers.get_all_leetcode_snapshots(SQLITE_FILE_NAME)
     users = sqlite_helpers.get_all_users(SQLITE_FILE_NAME)
-    weekly_baselines = sqlite_helpers.get_all_weekly_baselines(SQLITE_FILE_NAME)
-    return {"leetcode_snapshots": leetcode_snapshots, "users": users, "weekly_baselines": weekly_baselines}
+    return {"leetcode_snapshots": leetcode_snapshots, "users": users}
 
 
 @app.get("/phone")

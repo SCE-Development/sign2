@@ -34,38 +34,6 @@ def maybe_create_table(sqlite_file: str) -> bool:
                     );
                 """
             )
-            cursor.execute(
-                """
-                    CREATE TABLE IF NOT EXISTS weekly_baselines (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_slug TEXT NOT NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        easy INTEGER DEFAULT 0,
-                        medium INTEGER DEFAULT 0,
-                        hard INTEGER DEFAULT 0
-                    );
-                """
-            )
-            cursor.execute(
-                """
-                    DROP TRIGGER IF EXISTS first_weekly_snapshot;
-                """
-            )
-            cursor.execute("DROP TRIGGER IF EXISTS first_weekly_snapshot;")
-            cursor.execute("""
-                CREATE TRIGGER first_weekly_snapshot
-                AFTER INSERT ON leetcode_snapshots
-                BEGIN
-                    INSERT INTO weekly_baselines (user_slug, easy, medium, hard, created_at)
-                    SELECT NEW.user_slug, NEW.easy, NEW.medium, NEW.hard, NEW.created_at
-                    WHERE NOT EXISTS (
-                        SELECT 1
-                        FROM weekly_baselines
-                        WHERE user_slug = NEW.user_slug
-                        AND strftime('%Y-%W', created_at, 'localtime') = strftime('%Y-%W', NEW.created_at, 'localtime')
-                    );
-                END;
-            """)
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_user_created_at 
                 ON leetcode_snapshots(user_slug, created_at);
@@ -267,32 +235,6 @@ def get_all_leetcode_snapshots(sqlite_file: str):
             """
                 SELECT user_slug, easy, medium, hard, created_at
                 FROM leetcode_snapshots
-                ORDER BY created_at DESC
-            """
-        )
-        rows = cursor.fetchall()
-        return [
-            {
-                "user": row[0],
-                "easy": row[1],
-                "medium": row[2],
-                "hard": row[3],
-                "created_at": row[4],
-            }
-            for row in rows
-        ]
-
-
-def get_all_weekly_baselines(sqlite_file: str):
-    """
-    Get all weekly baselines from the database.
-    """
-    with sqlite3.connect(sqlite_file) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-                SELECT user_slug, easy, medium, hard, created_at
-                FROM weekly_baselines
                 ORDER BY created_at DESC
             """
         )
