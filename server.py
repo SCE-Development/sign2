@@ -147,6 +147,8 @@ async def get_phone_script():
     with wav_generation_lock:
         if last_wav_generation_time is None or current_time - last_wav_generation_time > 1800:
             logger.info("Regenerating phone script audio file on demand")
+            metrics_handler = MetricsHandler.instance()
+            with metrics_handler.wav_file_generation_seconds.time():
             my_big_dumb_generation_life() 
 
     MetricsHandler.wav_last_sent.set(time.time())
