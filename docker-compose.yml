@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: sce-led-matrix
+    container_name: sce-sign2
     ports:
       - "8000:8000"
     volumes:
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.emulator
-    container_name: sce-led-matrix-emulator
+    container_name: sce-sign2-emulator
     ports:
       - "8888:8888"
     volumes:
