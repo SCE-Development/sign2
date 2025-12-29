@@ -125,6 +125,18 @@ async def get_all_users():
         return {"error": str(e), "status_code": 500}
 
 
+@app.post("/checkIfUserExists")
+async def check_if_user_exists(request: Request):
+    try:
+        data = await request.json()
+        username = data.get("username", "")
+        exists = sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username)
+        return {"exists": exists}
+    except Exception as e:
+        logger.exception(f"Error checking if user exists: {str(e)}")
+        return {"error": str(e), "status_code": 500}
+
+
 @app.get("/debug")
 def debug():
     # dump all contents of the tables sorted by created_at for both tables
