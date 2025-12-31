@@ -6,7 +6,7 @@ from samplebase import SampleBase
 import os
 # Set the emulator to bind to the Raspberry Pi's IP address
 from RGBMatrixEmulator import graphics
-MAIN_URL='http://backend:8000/'
+MAIN_URL='http://backend:8080/'
 
 months_mapping = {
     0: "January",
