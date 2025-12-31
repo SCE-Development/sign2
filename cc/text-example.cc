@@ -167,7 +167,27 @@ int main(int argc, char * argv[]) {
   }
 
   //---------------------------------------------------------------------------
-  // 2. Load the font
+  // 2. Extract --api-url from remaining arguments
+  //---------------------------------------------------------------------------
+  std::string api_url;
+  
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg.find("--api-url=") == 0) {
+      api_url = arg.substr(strlen("--api-url="));
+      break;
+    }
+  }
+  
+  if (api_url.empty()) {
+    fprintf(stderr, "Error: --api-url flag is required\n");
+    fprintf(stderr, "Usage: %s --api-url=<url> [matrix-options]\n", argv[0]);
+    fprintf(stderr, "Example: %s --api-url=http://localhost:8000/ --led-rows=64 --led-cols=64\n", argv[0]);
+    return 1;
+  }
+
+  //---------------------------------------------------------------------------
+  // 3. Load the font
   //---------------------------------------------------------------------------
   const char * bdf_font_file = "./5x7.bdf";
   rgb_matrix::Font font;
@@ -177,7 +197,7 @@ int main(int argc, char * argv[]) {
   }
 
   //---------------------------------------------------------------------------
-  // 3. Create the matrix & set up signal handling
+  // 4. Create the matrix & set up signal handling
   //---------------------------------------------------------------------------
   RGBMatrix * canvas = CreateMatrixFromOptions(matrix_options, runtime_opt);
   if (!canvas) {
@@ -188,10 +208,8 @@ int main(int argc, char * argv[]) {
   signal(SIGTERM, InterruptHandler);
 
   //---------------------------------------------------------------------------
-  // 4. Continuously fetch and display leaderboard
+  // 5. Continuously fetch and display leaderboard
   //---------------------------------------------------------------------------
-  const std::string api_url = "http://localhost:8000/";
-
   while (!interrupt_received) {
     // Fetch JSON
     std::string leaderboard_data = FetchLeaderboard(api_url);
@@ -205,7 +223,7 @@ int main(int argc, char * argv[]) {
   }
 
   //---------------------------------------------------------------------------
-  // 5. Cleanup
+  // 6. Cleanup
   //---------------------------------------------------------------------------
   canvas -> Clear();
   delete canvas;
