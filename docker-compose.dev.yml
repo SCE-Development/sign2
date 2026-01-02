@@ -31,8 +31,3 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
-
-networks: 
-  default:
-    external: 
-      name: poweredge
