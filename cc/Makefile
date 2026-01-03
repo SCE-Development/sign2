@@ -2,6 +2,9 @@ CFLAGS=-Wall -O3 -g -Wextra -Wno-unused-parameter
 CXXFLAGS=$(CFLAGS)
 BINARIES=text-example
 
+# Usage: ./text-example --api-url=<url> [matrix-options]
+# Example: ./text-example --api-url=http://localhost:8000/ --led-rows=64 --led-cols=64
+
 # Paths for the rpi-rgb-led-matrix submodule
 RGB_LIB_DISTRIBUTION=./rpi-rgb-led-matrix
 RGB_INCDIR=$(RGB_LIB_DISTRIBUTION)/include

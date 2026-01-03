@@ -24,6 +24,7 @@ make all
 Now to run the binary, from the project's root
 ```
 sudo nohup ./cc/text-example \
+    --api-url=[YOUR API URL] \
     --led-rows=64 \
     --led-cols=64 \
     --led-chain=4 \
