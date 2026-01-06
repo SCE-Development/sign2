@@ -3,6 +3,5 @@ uvicorn
 pyyaml
 requests
 prometheus_client
-boto3
 dotenv
 gTTS
