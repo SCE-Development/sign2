@@ -22,3 +22,4 @@ tmp
 
 phone/
 !phone/keep
+config.json

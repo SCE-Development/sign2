@@ -8,6 +8,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
+      - ~/.ssh/id_ed25519-tunnel.pub:/app/ssh_key.pub
+      - ~/.ssh/id_ed25519-tunnel:/app/ssh_key
+      - ~/.ssh/known_hosts:/app/known_hosts
+      - ./config:/app/config
+      - ./freak.sh:/app/freak.sh
       - ./modules:/app/modules
       - ./server.py:/app/server.py
       - ./server_config.yml:/app/server_config.yml
