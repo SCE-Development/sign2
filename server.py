@@ -87,7 +87,7 @@ async def add_user(request: Request):
         if not username:
             raise HTTPException(status_code=400, detail="Username must be populated")
         if sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username):
-            raise HTTPException(status_code=400, detail="User already exists")
+            raise HTTPException(status_code=409, detail="User already exists")
         sqlite_helpers.add_user(SQLITE_FILE_NAME, username, first_name, last_name)
         return {"detail": f"{username} added successfully"}
     except HTTPException as e:
@@ -122,18 +122,6 @@ async def get_all_users():
         return {"users": users}
     except Exception as e:
         logger.exception(f"Error fetching all users: {str(e)}")
-        return {"error": str(e), "status_code": 500}
-
-
-@app.post("/checkIfUserExists")
-async def check_if_user_exists(request: Request):
-    try:
-        data = await request.json()
-        username = data.get("username", "")
-        exists = sqlite_helpers.check_if_user_exists(SQLITE_FILE_NAME, username)
-        return {"exists": exists}
-    except Exception as e:
-        logger.exception(f"Error checking if user exists: {str(e)}")
         return {"error": str(e), "status_code": 500}
 
 

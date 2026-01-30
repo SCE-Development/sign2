@@ -46,7 +46,7 @@ open_ssh_tunnel () {
     -o UserKnownHostsFile=${DOCKER_CONTAINER_KNOWN_HOSTS} \
     -o StrictHostKeyChecking=no \
     -i ${DOCKER_CONTAINER_SSH_KEYS} \
-    -f -g -N -R 0.0.0.0:${CORE_V4_PORT}:localhost:${SIGN2_PORT} ${CORE_V4_HOST}
+    -f -n -g -N -R 0.0.0.0:${CORE_V4_PORT}:localhost:${SIGN2_PORT} ${CORE_V4_HOST}
 }
 
 # Change file permissions of the private key.
