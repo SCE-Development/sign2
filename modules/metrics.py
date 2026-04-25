@@ -2,6 +2,12 @@ import enum
 import prometheus_client
 
 class Metrics(enum.Enum):
+
+    WAV_FILE_GENERATION_SECONDS = (
+        "wav_file_generation_seconds",
+        "Time taken to generate the phone script wav file in seconds",
+        prometheus_client.Summary,
+    )
     
     API_RESPONSE_CODES = (
         "leetcode_api_response_codes",
